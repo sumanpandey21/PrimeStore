@@ -20,7 +20,7 @@ export default function Footer() {
         <div>
           <h2 className="text-xl font-bold mb-4">Support</h2>
           <p className="mb-2">support@primestore.com</p>
-          <p>+977 9800000254</p>
+          <p className="px-0.5">+977 9800000254</p>
         </div>
 
         <div>

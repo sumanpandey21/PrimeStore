@@ -13,6 +13,7 @@ export default function Navbar() {
           alt="Primestore Logo"
           className="w-10 h-10 object-contain"
         />
+        
         <span className="text-xl font-bold text-gray-800">Primestore</span>
       </div>
 
