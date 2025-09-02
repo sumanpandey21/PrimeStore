@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from "react"
-import { ChevronRight, ArrowRight, ChevronLeft } from "lucide-react"
+import { ChevronRight, ArrowRight } from "lucide-react"
 import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
 
 const HomePage = () => {
@@ -223,4 +223,4 @@ const HomePage = () => {
   )
 }
 
-export default HomePage
+export default HomePage;
