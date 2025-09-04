@@ -41,9 +41,6 @@ export default function AccountLayout({ children }) {
               <Link href="/myaccount/my_profile" className={linkClass("/myaccount/my_profile")}>
                 My Profile
               </Link>
-              <Link href="/myaccount/my_payment_options" className={linkClass("/myaccount/my_payment_options")}>
-                My Payment Options
-              </Link>
             </nav>
 
             <div className="mt-8">
