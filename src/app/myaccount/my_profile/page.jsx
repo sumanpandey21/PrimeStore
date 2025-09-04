@@ -1,15 +1,14 @@
 "use client"
 import { useState } from "react"
-import Error from "../../components/Error"
+import AlertMessage from "../../components/AlertMessage"
 import Link from "next/link"
 
 export default function MyProfilePage() {
-  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     firstName: "Ram",
     lastName: "Poudel",
     email: "ram1256@gmail.com",
-    address: "Kathmandu, Nepal"
+    address: "Kathmandu, Nepal",
   })
 
   const handleInputChange = (e) => {
@@ -23,34 +22,41 @@ export default function MyProfilePage() {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     address: /^.{5,}$/,
   }
+  const [message, setMessage] = useState("")
+  const [alertTrigger, setAlertTrigger] = useState(0)
+
+  const showMessage = (msg) => {
+    setMessage(msg)
+    setAlertTrigger((prev) => prev + 1)
+  }
 
   const handleSaveChanges = (e) => {
     e.preventDefault()
     if (!formData.firstName || !formData.email || !formData.address) {
-      setError("All fields are required.")
+      showMessage("All fields are required.")
       return
     }
 
     if (!regexRules.firstName.test(formData.firstName)) {
-      setError("First name must be at least 2 letters.")
+      showMessage("First name must be at least 2 letters.")
       return
     }
     if (!regexRules.lastName.test(formData.lastName)) {
-      setError("Last name must be at least 2 letters.")
+      showMessage("Last name must be at least 2 letters.")
       return
     }
     if (!regexRules.email.test(formData.email)) {
-      setError("Enter a valid email address.")
+      showMessage("Enter a valid email address.")
       return
     }
     if (!regexRules.address.test(formData.address)) {
-      setError("Address must be at least 5 characters.")
+      showMessage("Address must be at least 5 characters.")
       return
     }
 
-    setError("Message sent successfully!")
+    showMessage("Message sent successfully!")
 
-     setFormData({
+    setFormData({
       firstName: "",
       lastName: "",
       email: "",
@@ -65,7 +71,6 @@ export default function MyProfilePage() {
       email: "",
       address: "",
     })
-    setError("")
   }
 
   return (
@@ -164,7 +169,7 @@ export default function MyProfilePage() {
             </button>
           </div>
         </form>
-        <Error message={error} />
+        <AlertMessage message={message} trigger={alertTrigger} />
       </div>
     </div>
   )

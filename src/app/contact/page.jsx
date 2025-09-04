@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import Error from "../components/Error"
+import AlertMessage from "../components/AlertMessage"
 import { BsTelephone, BsEnvelope } from "react-icons/bs"
 
 export default function ContactPage() {
@@ -11,7 +11,13 @@ export default function ContactPage() {
     message: "",
   })
 
-  const [error, setError] = useState("")
+  const [message, setMessage] = useState("")
+  const [alertTrigger, setAlertTrigger] = useState(0)
+
+  const showMessage = (msg) => {
+    setMessage(msg)
+    setAlertTrigger((prev) => prev + 1) 
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -24,25 +30,25 @@ export default function ContactPage() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!formData.name || !formData.email || !formData.phone) {
-      setError("Fields with * must be required")
+      showMessage("Fields with * must be required")
       return
     }
     if (!/^[A-Za-z\s]{2,50}$/.test(formData.name)) {
-      setError("Name should be 2-50 letters only.")
+      showMessage("Name should be 2-50 letters only.")
       return
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Invalid email address.")
+      showMessage("Invalid email address.")
       return
     }
 
     if (!/^(\+977|0)?9\d{9}$/.test(formData.phone.trim())) {
-      setError("Invalid phone number.")
+      showMessage("Invalid phone number.")
       return
     }
 
-    setError("Message sent successfully!")
+    showMessage("Message sent successfully!")
 
     setFormData({
       name: "",
@@ -144,9 +150,8 @@ export default function ContactPage() {
                 </button>
               </div>
             </form>
-            <div className="mt-3">
-              <Error message={error} />
-            </div>
+            <div className="py-2"></div>
+            <AlertMessage message={message} trigger={alertTrigger} />
           </div>
         </div>
       </div>
