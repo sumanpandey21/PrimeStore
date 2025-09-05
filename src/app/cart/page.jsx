@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react"
 import { Trash2, Plus, Minus } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "../context/CartContext"
+import Error from "../components/AlertMessage"
 
 const CartPage = () => {
   // Mock cart data
-  const {cartItems, setCartItems} = useCart();
+  const { cartItems, setCartItems } = useCart()
 
   React.useEffect(() => {
     setCartItems([
@@ -29,8 +30,15 @@ const CartPage = () => {
 
   const [couponCode, setCouponCode] = useState("")
   const [subtotal, setSubtotal] = useState(0)
-  const shipping = 0 // Free shipping
+  const shipping = 0
 
+  const [message, setMessage] = useState("")
+  const [alertTrigger, setAlertTrigger] = useState(0)
+
+  const showMessage = (msg) => {
+    setMessage(msg)
+    setAlertTrigger((prev) => prev + 1)
+  }
   // Calculate subtotal whenever cart items change
   useEffect(() => {
     const total = cartItems.reduce(
@@ -55,10 +63,10 @@ const CartPage = () => {
     setCartItems((items) => items.filter((item) => item.id !== id))
   }
 
-  // Apply coupon (mock functionality)
+  // Apply coupon
   const applyCoupon = () => {
     if (couponCode.trim()) {
-      alert(`Coupon "${couponCode}" applied!`)
+      showMessage(`Entered coupon code ${couponCode} is not valid anymore`)
       setCouponCode("")
     }
   }
@@ -78,7 +86,7 @@ const CartPage = () => {
         </nav>
 
         {cartItems.length !== 0 && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3">
             {/* Cart Items Section */}
             <div className="xl:col-span-3">
               {/* Header - Only visible on large screens */}
@@ -107,7 +115,7 @@ const CartPage = () => {
                         onClick={() => removeItem(item.id)}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3 cursor-pointer" />
                       </button>
                     </div>
                     <div>
@@ -160,11 +168,13 @@ const CartPage = () => {
                   </div>
                 </div>
               ))}
-
+              <div className="w-fit">
+                <Error message={message} trigger={alertTrigger} />
+              </div>
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-5">
                 <Link href={"/"}>
-                  <button className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors active:bg-gray-200 cursor-pointer">
+                  <button className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors active:bg-gray-300 cursor-pointer">
                     Return To Shop
                   </button>
                 </Link>

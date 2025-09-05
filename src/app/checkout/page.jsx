@@ -18,7 +18,6 @@ const CheckoutPage = () => {
     emailAddress: "",
   })
 
-  // Other states
   const [couponCode, setCouponCode] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("cash")
   const [saveInfo, setSaveInfo] = useState(true)
@@ -52,7 +51,7 @@ const CheckoutPage = () => {
   // Apply coupon
   const applyCoupon = () => {
     if (couponCode.trim()) {
-      alert(`Coupon "${couponCode}" applied!`)
+      showMessage(`Entered coupon code ${couponCode} is not valid anymore`)
       setCouponCode("")
     }
   }
@@ -80,14 +79,13 @@ const CheckoutPage = () => {
 
     setBillingDetails({
       firstName: "",
-    companyName: "",
-    streetAddress: "",
-    apartment: "",
-    townCity: "",
-    phoneNumber: "",
-    emailAddress: "",
+      companyName: "",
+      streetAddress: "",
+      apartment: "",
+      townCity: "",
+      phoneNumber: "",
+      emailAddress: "",
     })
-
   }
 
   const formatPrice = (price) => `Rs ${price.toLocaleString()}`
@@ -362,7 +360,7 @@ const CheckoutPage = () => {
                 />
                 <button
                   onClick={applyCoupon}
-                  className="px-6 py-3 bg-red-500 text-white rounded-r-lg hover:bg-red-600 transition-colors"
+                  className="px-6 py-3 bg-red-500 text-white rounded-r-lg hover:bg-red-600 transition-colors active:bg-red-800 cursor-pointer"
                 >
                   Apply Coupon
                 </button>
@@ -375,7 +373,7 @@ const CheckoutPage = () => {
               >
                 Place Order
               </button>
-              <AlertMessage message={message} trigger={alertTrigger}/>
+              <AlertMessage message={message} trigger={alertTrigger} />
             </div>
           </div>
         )}
