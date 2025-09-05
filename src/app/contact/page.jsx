@@ -29,8 +29,18 @@ export default function ContactPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.email || !formData.phone) {
-      showMessage("Fields with * must be required")
+
+    const requiredFields = [
+      "name",
+      "email",
+      "phone",
+    ]
+    const missingFields = requiredFields.filter(
+      (field) => !formData[field].trim()
+    )
+
+    if (missingFields.length > 0) {
+      showMessage(`Please fill in: ${missingFields.join(", ")}`)
       return
     }
     if (!/^[A-Za-z\s]{2,50}$/.test(formData.name)) {
@@ -144,13 +154,13 @@ export default function ContactPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-8 py-3 bg-red-500 text-white font-medium rounded-md hover:bg-red-600 active:bg-red-800 transition-colors cursor-pointer"
+                  className="px-8 py-3 bg-red-500 text-white font-medium rounded-md hover:bg-red-600 active:bg-red-800 transition-colors cursor-pointer mb-2"
                 >
                   Send Message
                 </button>
               </div>
             </form>
-            <div className="py-2"></div>
+            <div></div>
             <AlertMessage message={message} trigger={alertTrigger} />
           </div>
         </div>
