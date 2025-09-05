@@ -32,8 +32,13 @@ export default function MyProfilePage() {
 
   const handleSaveChanges = (e) => {
     e.preventDefault()
-    if (!formData.firstName || !formData.email || !formData.address) {
-      showMessage("All fields are required.")
+    const requiredFields = ["firstName", "lastName", "email", "address"]
+    const missingFields = requiredFields.filter(
+      (field) => !formData[field].trim()
+    )
+
+    if (missingFields.length > 0) {
+      showMessage(`Please fill in: ${missingFields.join(", ")}`)
       return
     }
 
