@@ -49,8 +49,10 @@ export default function Navbar() {
         </div>
 
         <BsHeart className="w-6 h-6 text-gray-700 hover:text-red-500 cursor-pointer" />
-
+        <Link href={'/cart'}>
+        
         <BsCart className="w-6 h-6 text-gray-700 hover:text-blue-500 cursor-pointer" />
+        </Link>
       </div>
     </nav>
   )

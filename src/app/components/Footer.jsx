@@ -49,7 +49,7 @@ export default function Footer() {
             <Link href={""}>
               <li className={hoverClass}>Login / Register</li>
             </Link>
-            <Link href={""}>
+            <Link href={"/cart"}>
               <li className={hoverClass}>Cart</li>
             </Link>
             <Link href={""}>
