@@ -95,7 +95,7 @@ export default function AlertMessage({ message, trigger }) {
             onClick={handleClose}
             className="ml-2 rounded-full p-1 hover:bg-white/20 transition"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 cursor-pointer" />
           </button>
         </motion.div>
       )}
