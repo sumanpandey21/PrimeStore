@@ -37,7 +37,6 @@ export default function ReturnsPage() {
   }
 
   const columns = [
-    { key: "id" },
     { key: "product" },
     { key: "date", className: "text-sm text-gray-600" },
     { key: "status", type: "status" },

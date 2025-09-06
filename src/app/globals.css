@@ -15,3 +15,11 @@ html, body {
   box-sizing: border-box;
   min-width: 0; /* important inside flex/grid to avoid unexpected shrink */
 }
+
+@keyframes scale-fade {
+  0% { opacity: 0; transform: scaleY(0.95); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+.animate-scale-fade {
+  animation: scale-fade 0.15s ease-out;
+}
