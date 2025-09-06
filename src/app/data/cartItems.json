@@ -1,0 +1,19 @@
+{
+  "cartItems": [
+    {
+      "id": 1,
+      "name": "LCD Monitor",
+      "price": 15000,
+      "quantity": 1,
+      "image": "/monitor.png"
+    },
+    {
+      "id": 2,
+      "name": "Motorola X20",
+      "price": 12999,
+      "quantity": 1,
+      "image": "/mobilephone.png",
+      "item_left": 6  
+    }
+  ]
+}
