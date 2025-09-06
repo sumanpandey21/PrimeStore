@@ -3,42 +3,18 @@ import React, { useState, useEffect } from "react"
 import { Trash2, Plus, Minus } from "lucide-react"
 import Link from "next/link"
 import { useCart } from "../context/CartContext"
-import Error from "../components/AlertMessage"
+import EmptyCart from "../components/EmptyCart"
+import CartData from "../data/cartItems"
 
 const CartPage = () => {
-  // Mock cart data
   const { cartItems, setCartItems } = useCart()
 
-  React.useEffect(() => {
-    setCartItems([
-      {
-        id: 1,
-        name: "LCD Monitor",
-        price: 15000,
-        quantity: 1,
-        image: "/monitor.png",
-      },
-      {
-        id: 2,
-        name: "Motorola X20",
-        price: 12999,
-        quantity: 1,
-        image: "/mobilephone.png",
-      },
-    ])
+  useEffect(() => {
+    setCartItems(CartData.cartItems)
   }, [setCartItems])
 
-  const [couponCode, setCouponCode] = useState("")
   const [subtotal, setSubtotal] = useState(0)
-  const shipping = 0
 
-  const [message, setMessage] = useState("")
-  const [alertTrigger, setAlertTrigger] = useState(0)
-
-  const showMessage = (msg) => {
-    setMessage(msg)
-    setAlertTrigger((prev) => prev + 1)
-  }
   // Calculate subtotal whenever cart items change
   useEffect(() => {
     const total = cartItems.reduce(
@@ -50,7 +26,6 @@ const CartPage = () => {
 
   // Update quantity
   const updateQuantity = (id, newQuantity) => {
-    if (newQuantity < 1) return
     setCartItems((items) =>
       items.map((item) =>
         item.id === id ? { ...item, quantity: newQuantity } : item
@@ -63,20 +38,11 @@ const CartPage = () => {
     setCartItems((items) => items.filter((item) => item.id !== id))
   }
 
-  // Apply coupon
-  const applyCoupon = () => {
-    if (couponCode.trim()) {
-      showMessage(`Entered coupon code ${couponCode} is not valid anymore`)
-      setCouponCode("")
-    }
-  }
-
   const formatPrice = (price) => `Rs ${price.toLocaleString()}`
 
   return (
     <div className={`min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8`}>
       <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb */}
         <nav className="mb-8 text-sm text-gray-600">
           <Link href={"/"}>
             <span className="hover:text-gray-800 cursor-pointer">Home</span>
@@ -122,6 +88,12 @@ const CartPage = () => {
                       <h3 className="font-medium text-gray-800 text-sm sm:text-base">
                         {item.name}
                       </h3>
+                      {item.item_left > 0 && (
+                        <p className="text-xs mt-1 text-red-500 font-bold">
+                          {item.item_left - item.quantity} item
+                          {item.item_left - item.quantity === 1 ? "" : "s"} left
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -143,7 +115,7 @@ const CartPage = () => {
                         className="p-1 sm:p-2 hover:bg-gray-100 transition-colors"
                         disabled={item.quantity <= 1}
                       >
-                        <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <Minus className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer" />
                       </button>
                       <span className="px-2 sm:px-4 py-1 sm:py-2 text-sm sm:text-base font-medium border-x">
                         {item.quantity.toString().padStart(2, "0")}
@@ -153,8 +125,9 @@ const CartPage = () => {
                           updateQuantity(item.id, item.quantity + 1)
                         }
                         className="p-1 sm:p-2 hover:bg-gray-100 transition-colors"
+                        disabled={item.quantity >= item.item_left}
                       >
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer" />
                       </button>
                     </div>
                   </div>
@@ -168,9 +141,7 @@ const CartPage = () => {
                   </div>
                 </div>
               ))}
-              <div className="w-fit">
-                <Error message={message} trigger={alertTrigger} />
-              </div>
+              <div className="w-fit"></div>
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-5">
                 <Link href={"/"}>
@@ -178,22 +149,6 @@ const CartPage = () => {
                     Return To Shop
                   </button>
                 </Link>
-
-                <div className="flex flex-1 max-w-md">
-                  <input
-                    type="text"
-                    placeholder="Coupon Code"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:border-red-500"
-                  />
-                  <button
-                    onClick={applyCoupon}
-                    className="px-6 py-3 bg-red-500 text-white rounded-r-lg hover:bg-red-600 transition-colors active:bg-red-700 cursor-pointer"
-                  >
-                    Apply Coupon
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -208,14 +163,9 @@ const CartPage = () => {
                     <span className="font-medium">{formatPrice(subtotal)}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-600">Shipping:</span>
-                    <span className="font-medium text-green-600">Free</span>
-                  </div>
-
                   <div className="flex justify-between items-center py-3 text-lg font-semibold">
                     <span>Total:</span>
-                    <span>{formatPrice(subtotal + shipping)}</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
                   <Link href={{ pathname: "/checkout", query: { cartItems } }}>
                     <button className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors font-medium active:bg-red-700 cursor-pointer">
@@ -229,20 +179,7 @@ const CartPage = () => {
         )}
 
         {/* Empty Cart Message */}
-        {cartItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-90 text-center">
-            <div className="text-gray-400 text-6xl mb-4">🛒</div>
-            <h2 className="text-2xl font-semibold text-gray-600 mb-2">
-              Your cart is empty
-            </h2>
-            <p className="text-gray-500 mb-6">Add some items to get started</p>
-            <Link href={"/"}>
-              <button className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-600 transition-colors">
-                Continue Shopping
-              </button>
-            </Link>
-          </div>
-        )}
+        {cartItems.length === 0 && <EmptyCart />}
       </div>
     </div>
   )
