@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
+    {"offset": {"line": 19, "column": 0}, "map": {"version":3,"sources":["file:///C:/Primestore/frontend/src/app/myaccount/page.js"],"sourcesContent":["import { redirect } from \"next/navigation\";\r\n\r\nfunction MyAccountPage() {\r\n  redirect(\"/myaccount/my-profile\");\r\n}\r\n\r\nexport default MyAccountPage;"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEA,SAAS;IACP,IAAA,iMAAQ,EAAC;AACX;uCAEe","debugId":null}}]
+}

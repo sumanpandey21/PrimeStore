@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
+    {"offset": {"line": 19, "column": 0}, "map": {"version":3,"sources":["file:///C:/Primestore_frontend/PrimeStore/src/app/wishlist/page.js"],"sourcesContent":["import React from 'react'\r\n\r\nfunction page() {\r\n    return (\r\n        <div>\r\n            {wishlistItems.map((item) => (\r\n                <div key={item.id} className=\"...\">\r\n                    <img src={item.image} alt={item.name} className=\"w-40 h-40 object-cover\" />\r\n                    <p>{item.name}</p>\r\n                    <p>Rs. {item.price}</p>\r\n                    <button onClick={() => removeItem(item.id)}>Remove</button>\r\n                </div>\r\n            ))}</div>\r\n    )\r\n}\r\n\r\nexport default page\r\n"],"names":[],"mappings":";;;;;AAAA;;;AAEA,SAAS;IACL,qBACI,8OAAC;kBACI,cAAc,GAAG,CAAC,CAAC,qBAChB,8OAAC;gBAAkB,WAAU;;kCACzB,8OAAC;wBAAI,KAAK,KAAK,KAAK;wBAAE,KAAK,KAAK,IAAI;wBAAE,WAAU;;;;;;kCAChD,8OAAC;kCAAG,KAAK,IAAI;;;;;;kCACb,8OAAC;;4BAAE;4BAAK,KAAK,KAAK;;;;;;;kCAClB,8OAAC;wBAAO,SAAS,IAAM,WAAW,KAAK,EAAE;kCAAG;;;;;;;eAJtC,KAAK,EAAE;;;;;;;;;;AAQjC;uCAEe","debugId":null}}]
+}

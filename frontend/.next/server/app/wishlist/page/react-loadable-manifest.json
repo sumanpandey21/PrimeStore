@@ -1,0 +1,9 @@
+{
+  "[project]/node_modules/react-stars/dist/react-stars.js [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/node_modules/react-stars/dist/react-stars.js [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/node_modules_72e001ae._.js",
+      "static/chunks/node_modules_react-stars_dist_react-stars_c5325632.js"
+    ]
+  }
+}
