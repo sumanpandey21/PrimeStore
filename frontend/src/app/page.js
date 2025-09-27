@@ -7,7 +7,6 @@ import BestSellingSlider from "@/components/BestSellingSlider";
 import MainImage from "@/components/MainImage";
 import ExploreProduct from "@/components/ExploreProduct";
 import FooterLogos from "@/components/FooterLogos";
-import categoriesMockData from "@/mockdata/mockdata";
 
 const Page = () => {
   return (

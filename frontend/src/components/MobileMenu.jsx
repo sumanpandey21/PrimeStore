@@ -5,7 +5,7 @@ import ServicePromotion from './ServicePromotionFilter';
 import PriceFilter from './PriceFilter';
 import RatingFilter from './RatingFilter';
 import { usePathname } from "next/navigation";
-import useAuthStore from "@/store/authStore";
+import {useAuthStore} from "@/store/auth";
 import Image from 'next/image';
 import { Menu } from 'lucide-react';
 

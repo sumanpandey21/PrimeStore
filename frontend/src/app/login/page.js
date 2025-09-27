@@ -1,282 +1,224 @@
-"use client";
-import React, { useState, useEffect } from 'react'; // Import useEffect
-import Image from 'next/image';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { useRouter } from 'next/navigation';
+"use client"
 
-const page = () => {
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const router = useRouter();
+import { useState } from "react"
+import { toast } from "react-toastify"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Eye, EyeOff, User, Lock } from "lucide-react"
+import { FcGoogle } from "react-icons/fc"
+import { useEffect } from "react"
+import LoadingOverlay from "@/components/LoadingOverlay"
+
+function LoginPage() {
+  const [checkingToken, setCheckingToken] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const router = useRouter()
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [isResending, setIsResending] = useState(false);
-  const [lastLoginErrorMessage, setLastLoginErrorMessage] = useState('');
-  // New state for cooldown: seconds remaining until resend is allowed
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+    username: "",
+    password: "",
+  })
 
-  // useEffect to handle the cooldown timer
   useEffect(() => {
-    let timer;
-    if (cooldownSeconds > 0) {
-      timer = setTimeout(() => {
-        setCooldownSeconds(prevSeconds => prevSeconds - 1);
-      }, 1000);
-    }
-    // Cleanup function to clear the timer if component unmounts or cooldown ends
-    return () => clearTimeout(timer);
-  }, [cooldownSeconds]);
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("access") : null
+    if (token) router.replace("/")
+    else setCheckingToken(false)
+  }, [router])
 
-  // Determines if the "Resend Verification Link" should be shown
-  const shouldShowResendLink = (errorDetail) => {
-    return errorDetail && (errorDetail.toLowerCase().includes('not active') || errorDetail.toLowerCase().includes('not verified'));
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    if (lastLoginErrorMessage) {
-      setLastLoginErrorMessage('');
-    }
-  };
-
-  const validateForm = () => {
-    let newErrors = {};
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  if (checkingToken)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+      </div>
+    )
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLastLoginErrorMessage('');
-
-    if (validateForm()) {
-      setErrors({});
-
-      try {
-        setIsLoggingIn(true);
-        const response = await fetch('http://127.0.0.1:8000/auth/login/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          toast.success('Login successful!', { position: "bottom-right" });
-          console.log('Login successful! Received data:', data);
-
-          if (data.access) {
-            localStorage.setItem('authToken', data.access);
-          }
-          setFormData({ email: '', password: '' });
-          router.push('/');
-
-        } else {
-          let errorMessage = 'Login failed. Please check your credentials.';
-
-          if (data && data.detail) {
-            errorMessage = data.detail;
-          } else if (data && data.non_field_errors) {
-            errorMessage = data.non_field_errors.join(', ');
-          } else if (data && data.email) {
-            errorMessage = `Email error: ${data.email.join(', ')}`;
-          } else if (data && data.password) {
-            errorMessage = `Password error: ${data.password.join(', ')}`;
-          }
-
-          if (shouldShowResendLink(errorMessage)) {
-            setLastLoginErrorMessage(errorMessage);
-            toast.warn(errorMessage + ' Please check your email to verify your account.', { position: "bottom-right" });
-          } else {
-            toast.error(errorMessage, { position: "bottom-right" });
-          }
-        }
-      } catch (error) {
-        console.error('Network error or unexpected issue during login:', error);
-        toast.error('A network error occurred. Please try again later.', { position: "bottom-right" });
-      } finally {
-        setIsLoggingIn(false);
-      }
-    } else {
-      toast.error('Please correct the errors in the form.', { position: "bottom-right" });
-      setIsLoggingIn(false);
+    e.preventDefault()
+    if (!formData.username || !formData.password) {
+      toast.error("All fields are required")
+      return
     }
-  };
-
-  const handleResendVerification = async (e) => {
-    e.preventDefault();
-
-    if (!formData.email) {
-      toast.error('Please enter your email in the field above to resend the verification link.', { position: "bottom-right" });
-      return;
-    }
-
-    if (cooldownSeconds > 0) {
-      // This check is primarily for visual feedback, the button should already be disabled
-      toast.info(`Please wait ${cooldownSeconds} seconds before resending again.`, { position: "bottom-right" });
-      return;
-    }
-
-    setIsResending(true);
-    // Start cooldown immediately after initiating resend
-    setCooldownSeconds(60); // Set cooldown to 60 seconds
-
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/registration/resend-email/', {
-        method: 'POST',
+      setLoading(true)
+      const response = await fetch("http://127.0.0.1:8000/api/token/", {
+        method: "POST",
+        body: JSON.stringify(formData),
         headers: {
-          'Content-Type': 'application/json',
+          "Content-type": "application/json",
         },
-        body: JSON.stringify({ email: formData.email }),
-      });
+      })
 
-      const data = await response.json();
-
+      const data = await response.json()
       if (response.ok) {
-        toast.success(/*data.detail || */'New verification email sent! Please check your inbox.', { position: "bottom-right" });
+        localStorage.setItem("access", data.access)
+        localStorage.setItem("refresh", data.refresh)
+
+        toast.success("Login successfully")
+        router.push("/")
       } else {
-        let errorMessage = data.detail || 'Failed to resend verification email. Please try again.';
-        if (errorMessage.toLowerCase().includes('no account found')) {
-          errorMessage = 'No account found for this email. Please ensure it\'s correct or sign up.';
-        }
-        toast.error(errorMessage, { position: "bottom-right" });
-        // Optionally, reset cooldown if the resend failed due to a server-side error
-        // setCooldownSeconds(0); // Only if you want to allow immediate retry on certain failures
+        toast.error("Wrong creditionals")
       }
     } catch (error) {
-      console.error('Network error or unexpected issue during resend:', error);
-      toast.error('A network error occurred while trying to resend the email.', { position: "bottom-right" });
-      // setCooldownSeconds(0); // Only if you want to allow immediate retry on network errors
+      toast.error("Network error — check server..")
     } finally {
-      setIsResending(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const handleGoogleLogin = () => {
-    console.log('Continue with Google clicked for login!');
-    toast.info('Google login integration coming soon!', { position: "bottom-right" });
-  };
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword)
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Login</h2>
-
-        <form onSubmit={handleSubmit}>
-          {/* Email Input */}
-          <div className="mb-5">
-            <label htmlFor="email" className="block text-gray-700 text-sm font-medium mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-              placeholder="Enter your email"
-            />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <User className="w-8 h-8 text-white" />
           </div>
-
-          {/* Password Input */}
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 text-sm font-medium mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-500 ${errors.password ? 'border-red-500' : 'border-gray-300'
-                }`}
-              placeholder="Enter your password"
-            />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-            {/* Links for Forgot Password and Resend Verification */}
-            <p className={`text-right text-sm mt-2 flex items-center ${shouldShowResendLink(lastLoginErrorMessage) ? 'justify-between' : 'justify-end'}`}>
-              {/* Only show resend link if the last login error indicated an unverified account */}
-              {shouldShowResendLink(lastLoginErrorMessage) && (
-                <a
-                  href="#"
-                  onClick={handleResendVerification}
-                  // Disable if currently resending or if cooldown is active
-                  className={`text-blue-600 hover:underline mr-4 ${isResending || cooldownSeconds > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={isResending || cooldownSeconds > 0}
-                >
-                  {isResending ? 'Sending...' : cooldownSeconds > 0 ? `Resend in ${cooldownSeconds}s` : 'Resend Verification Link'}
-                </a>
-              )}
-              <a href="/forgot-password" className="text-blue-600 hover:underline">
-                Forgot password?
-              </a>
-            </p>
-          </div>
-
-          {/* Login Button */}
-          <button
-            disabled={isLoggingIn}
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-300"
-          >
-            {isLoggingIn ? 'Logging In...' : 'Login'}
-          </button>
-        </form>
-
-        {/* OR separator */}
-        <div className="my-6 flex items-center">
-          <div className="flex-grow border-t border-gray-300"></div>
-          <span className="mx-4 text-gray-500 text-sm">OR</span>
-          <div className="flex-grow border-t border-gray-300"></div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
-        {/* Continue with Google Button */}
-        <a
-          href={`https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=${process.env.GOOGLE_REDIRECT_URI}&prompt=consent&response_type=code&client_id=${process.env.GOOGLE_CLIENT_ID}&scope=openid%20email%20profile&access_type=offline`}
-          // onClick={handleGoogleSignup}
-          className="w-full bg-white text-gray-700 py-2 px-4 border border-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-300"
-        >
-          {/* Ensure 'google-icon-logo.svg' is in your 'public' folder */}
-          <Image src="/google.svg" alt="Google logo" width={16} height={16} className="mr-2" />
-          Continue with Google
-        </a>
+        {/* Login Form Card */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label
+                htmlFor="username"
+                className="text-sm font-medium text-gray-700 block"
+              >
+                Username
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 outline-none"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                />
+              </div>
+            </div>
 
-        {/* Link to Sign Up page */}
-        <p className="text-center text-gray-600 text-sm mt-6">
-          Don't have an account?{' '}
-          <a href="/signup" className="text-blue-600 hover:underline">
-            Sign up here
-          </a>
-        </p>
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700 block"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 outline-none"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200 focus:outline-none cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="ml-2 text-sm text-gray-600">Remember me</span>
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:ring-blue-200 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg cursor-pointer"
+            >
+              Sign In
+            </button>
+            <LoadingOverlay show={loading} text="Checking your creditionals..." />
+          </form>
+
+          {/* Divider */}
+          <div className="mt-6 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Social Login Options */}
+          <div className="mt-6 grid grid-cols-1 gap-3">
+            <button
+              type="button"
+              className="w-full inline-flex justify-center py-2.5 px-4 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+            >
+              <FcGoogle size={20} />
+              <span className="ml-2">Google</span>
+            </button>
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?
+              <Link
+                href="/signup"
+                className="font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200"
+              >
+                Sign up here
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-500">
+            By signing in, you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-gray-700">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-gray-700">
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
       </div>
-      <ToastContainer />
     </div>
-  );
-};
+  )
+}
 
-export default page;
+export default LoginPage
