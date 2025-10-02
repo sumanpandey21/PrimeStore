@@ -5,12 +5,11 @@ import Link from "next/link"
 import UserMenu from "./UserMenu"
 import { usePathname, useRouter } from "next/navigation"
 import { Menu } from "lucide-react"
-import { User, ShoppingCart, Heart, Search } from "lucide-react"
+import { User, ShoppingCart, Heart, Search } from "lucide-react"  
 import MobileMenu from "./MobileMenu"
+import { useCart } from "@/store/cartStore"
 
 const Navbar = ({ q = "" }) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("access") : null
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -18,6 +17,9 @@ const Navbar = ({ q = "" }) => {
   const pathname = usePathname()
   const router = useRouter()
   const [query, setQuery] = useState(q)
+  const { cartItems } = useCart()
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -149,10 +151,18 @@ const Navbar = ({ q = "" }) => {
             </Link>
             <Link
               href="/cart"
-              className="p-0.5 lg:p-2 rounded-full hover:bg-gray-100"
+              className="relative flex items-center justify-center p-2 lg:p-3 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <ShoppingCart />
+              <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 text-gray-700" />
+
+              {/* Badge */}
+              {token && cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] lg:text-xs font-bold px-1.5 lg:px-2 py-0.5 rounded-full shadow-md">
+                  {cartItems.length}
+                </span>
+              )}
             </Link>
+
             {token && (
               <button
                 ref={buttonRef}

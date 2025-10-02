@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import CircularIndeterminate from "@/components/Loading";
+import { CircleLoader } from "@/components/Loading";
 import Navbar from "@/components/Navbar";
 import { notFound } from "next/navigation";
 
@@ -52,7 +52,7 @@ const page = () => {
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center">
-                <CircularIndeterminate />
+                <CircleLoader />
             </div>
         );
     }

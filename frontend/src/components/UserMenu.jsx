@@ -6,14 +6,17 @@ import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
 import { LogOut } from "lucide-react"
 import { User, Package, RefreshCw, Star } from "lucide-react"
+import { useCart } from "@/store/cartStore"
 
 const UserMenu = () => {
   const router = useRouter()
-  const token = localStorage.getItem("access")
-  const [closeMenu, setCloseMenu] = useState(false)
-
+  const token = sessionStorage.getItem("access")
+  const { clearCart } = useCart()
+  
   const handleLogout = () => {
-    localStorage.clear()
+    sessionStorage.clear()
+    clearCart()
+    sessionStorage.removeItem("access")
     router.push("/")
   }
 

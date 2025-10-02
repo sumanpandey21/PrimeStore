@@ -1,23 +1,134 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import { Trash2, Plus, Minus } from "lucide-react";
-import Link from "next/link";
-import EmptyCart from "@/components/EmptyCart";
-import { useCart } from "@/store/cartStore";
+"use client"
+import React, { useState, useEffect } from "react"
+import { Trash2, Plus, Minus } from "lucide-react"
+import Link from "next/link"
+import EmptyCart from "@/components/EmptyCart"
+import { useCart } from "@/store/cartStore"
+import { toast } from "react-toastify"
 
 const CartPage = () => {
-  const { cartItems, updateQuantity, removeCartItem } = useCart();
-  const [subtotal, setSubtotal] = useState(0);
+  const { cartItems, setCartItems, updateQuantity, removeCartItem, clearCart } =
+    useCart()
+  const [subtotal, setSubtotal] = useState(0)
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
+
+  const fetchCartsData = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/carts/", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (response.status === 401) { 
+        setCartItems([])
+        toast.error("Signin required..")
+        return
+      }
+
+      if (!response.ok) {
+        toast.error("Failed to fetch cart data")
+        return
+      }
+
+      const data = await response.json()
+
+      setCartItems(data.results ? data.results : data)
+    } catch (error) {
+      toast.error("Something went wrong while fetching cart data..")
+    }
+  }
+
+  const handleQuantityChange = async (cartId, newQuantity) => {
+    if (newQuantity < 1) return
+
+    // Update quantity locally first for immediate UI response
+
+    updateQuantity(cartId, newQuantity)
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/carts/${cartId}/`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity: newQuantity }),
+        }
+      )
+
+      if (!response.ok) throw new Error("Failed to update quantity")
+
+      const updatedItem = await response.json()
+      updateQuantity(updatedItem.id, updatedItem.quantity)
+    } catch (error) {
+      toast.error("Failed to update quantity")
+      // Revert to original data on error
+      fetchCartsData()
+    }
+  }
+
+  const handleRemoveItem = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/carts/${id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        removeCartItem(id)
+      } else {
+        toast.error("Failed to remove item")
+      }
+    } catch (error) {
+      toast.error("Something went wrong while removing item..")
+    }
+  }
+
+  const handleClearCart = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/cart/clear/", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        clearCart()
+      } else {
+        toast.error("Failed to clear cart")
+      }
+    } catch (error) {
+      toast.error("Something went wrong while clearing cart..")
+    }
+  }
+
+  // Calculate subtotal in real-time based on current cart items
+  const calculateSubtotal = () => {
+    return cartItems.reduce((acc, item) => {
+      // Use the final_price and current quantity to calculate subtotal
+      return acc + item.final_price * item.quantity
+    }, 0)
+  }
+
+  // Update subtotal whenever cartItems change
+  useEffect(() => {
+    const total = calculateSubtotal()
+    setSubtotal(total)
+  }, [cartItems])
 
   useEffect(() => {
-    const total = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    setSubtotal(total);
-  }, [cartItems]);
+    fetchCartsData()
+  }, [])
 
-  const formatPrice = (price) => `Rs ${price.toLocaleString()}`;
+  const formatPrice = (price) => (price ? `Rs ${price.toLocaleString()}` : "")
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -51,12 +162,12 @@ const CartPage = () => {
                   <div className="flex items-center space-x-4 md:col-span-6">
                     <div className="relative">
                       <img
-                        src={item.image}
+                        src={item.product_image1}
                         alt={item.name}
                         className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-100"
                       />
                       <button
-                        onClick={() => removeCartItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id)}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
                         <Trash2 className="w-3 h-3 cursor-pointer" />
@@ -64,12 +175,15 @@ const CartPage = () => {
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-800 text-sm sm:text-base">
-                        {item.name}
+                        {item.product_name}
                       </h3>
-                      {(item.item_left - item.quantity) <= 10 && (
+                      {item.available_stock - item.quantity <= 10 && (
                         <p className="text-xs mt-1 text-red-500 font-bold">
-                          {item.item_left - item.quantity} item
-                          {item.item_left - item.quantity === 1 ? "" : "s"} left
+                          {item.available_stock - item.quantity} item
+                          {item.available_stock - item.quantity === 1
+                            ? ""
+                            : "s"}{" "}
+                          left
                         </p>
                       )}
                     </div>
@@ -77,7 +191,7 @@ const CartPage = () => {
 
                   {/* Price */}
                   <div className="md:col-span-2 text-sm sm:text-base font-medium text-gray-700 md:text-center">
-                    {formatPrice(item.price)}
+                    {formatPrice(item.final_price)}
                   </div>
 
                   {/* Quantity */}
@@ -85,31 +199,43 @@ const CartPage = () => {
                     <div className="flex items-center border rounded-lg">
                       <button
                         onClick={() =>
-                          updateQuantity(item.id, item.quantity - 1)
+                          handleQuantityChange(item.id, item.quantity - 1)
                         }
                         className="p-1 sm:p-2 hover:bg-gray-100 transition-colors"
                         disabled={item.quantity <= 1}
                       >
-                        <Minus className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer" />
+                        <Minus
+                          className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                            item.quantity < 2
+                              ? "cursor-not-allowed"
+                              : "cursor-pointer"
+                          }`}
+                        />
                       </button>
                       <span className="px-2 sm:px-4 py-1 sm:py-2 text-sm sm:text-base font-medium border-x">
                         {item.quantity.toString().padStart(2, "0")}
                       </span>
                       <button
                         onClick={() =>
-                          updateQuantity(item.id, item.quantity + 1)
+                          handleQuantityChange(item.id, item.quantity + 1)
                         }
                         className="p-1 sm:p-2 hover:bg-gray-100 transition-colors"
-                        disabled={item.quantity >= item.item_left}
+                        disabled={item.quantity >= item.available_stock}
                       >
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 cursor-pointer" />
+                        <Plus
+                          className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                            item.quantity == item.available_stock
+                              ? "cursor-not-allowed"
+                              : "cursor-pointer"
+                          } `}
+                        />
                       </button>
                     </div>
                   </div>
 
                   {/* Subtotal */}
                   <div className="md:col-span-2 text-sm sm:text-base font-medium text-gray-700 md:text-center">
-                    {formatPrice(item.price * item.quantity)}
+                    {formatPrice(item.final_price * item.quantity)}
                   </div>
                 </div>
               ))}
@@ -149,10 +275,15 @@ const CartPage = () => {
         )}
 
         {/* Empty Cart */}
-        {cartItems.length === 0 && <EmptyCart title={"Your cart is empty"} message={"Add some items before checkout"} />}
+        {cartItems.length === 0 && (
+          <EmptyCart
+            title={"Your cart is empty"}
+            message={"Add some items before checkout"}
+          />
+        )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CartPage;
+export default CartPage

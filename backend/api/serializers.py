@@ -52,55 +52,158 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-class UserSerilizer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["username", "email"]
 
 
-class ProductSerilizer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Product
         fields = "__all__"
 
 
-class CategorySerilizer(serializers.ModelSerializer):
+class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = '__all__'
-
-
-class CartSerilizer(serializers.ModelSerializer):
-    class Meta:
-        model = Cart
         fields = "__all__"
 
 
-class WishlistSerilizer(serializers.ModelSerializer):
+class CartSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_image1 = serializers.ImageField(source="product.image1", read_only=True)
+    product_stock = serializers.IntegerField(source="product.stock", read_only=True)
+    final_price = serializers.DecimalField(
+        source="product.final_price", max_digits=10, decimal_places=2, read_only=True
+    )
+    username = serializers.CharField(source="user.username", read_only=True)
+    item_subtotal = serializers.SerializerMethodField(read_only=True)
+    available_stock = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = (
+            "id",
+            "user",
+            "product",
+            "username",
+            "product_name",
+            "product_stock",
+            "available_stock",
+            "quantity",
+            "final_price",
+            "product_image1",
+            "item_subtotal",
+        )
+        read_only_fields = (
+            "id",
+            "user",
+            "username",
+            "product_name",
+            "final_price",
+            "product_stock",
+            "available_stock",
+            "product_image1",
+            "item_subtotal",
+        )
+
+    def get_item_subtotal(self, obj):
+        return obj.product.final_price * obj.quantity
+
+    def get_available_stock(self, obj):
+        return obj.product.stock + obj.quantity
+
+    def create(self, validated_data):
+        user = validated_data["user"]
+        product = validated_data["product"]
+        quantity = validated_data.get("quantity", 1)
+
+        # merge duplicate items
+        cart_item, created = Cart.objects.get_or_create(
+            user=user, product=product, defaults={"quantity": 0}
+        )
+
+        if created:
+            # If new cart item
+            if quantity > product.stock:
+                raise serializers.ValidationError(
+                    f"Requested quantity ({quantity}) exceeds available stock ({product.stock})"
+                )
+            cart_item.quantity = quantity
+            product.stock -= quantity
+            cart_item.save()
+            product.save()
+        else:
+            # If item already exists, increase quantity
+            additional_quantity = quantity
+            if (
+                cart_item.quantity + additional_quantity
+                > product.stock + cart_item.quantity
+            ):
+                raise serializers.ValidationError(
+                    f"Requested quantity exceeds available stock"
+                )
+
+            cart_item.quantity += additional_quantity
+            product.stock -= additional_quantity
+            cart_item.save()
+            product.save()
+
+        return cart_item
+
+
+    def update(self, instance, validated_data):
+        product = instance.product
+        new_quantity = validated_data.get("quantity", instance.quantity)
+        quantity_difference = new_quantity - instance.quantity
+
+        if quantity_difference > 0:  # user is increasing
+            available_stock = product.stock  # DB stock left
+
+            if available_stock < quantity_difference:
+                raise serializers.ValidationError("Not enough stock available")
+
+            # reduce actual DB stock
+            product.stock -= quantity_difference
+
+        elif quantity_difference < 0:  # user is decreasing
+            # return stock to DB
+            product.stock += abs(quantity_difference)
+
+        instance.quantity = new_quantity
+        product.save()
+        instance.save()
+        return instance
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Wishlist
         fields = "__all__"
 
 
-class CheckoutSerilizer(serializers.ModelSerializer):
+class CheckoutSerializer(serializers.ModelSerializer):
     class Meta:
         model = Checkout
         fields = "__all__"
 
 
-class OrderSerilizer(serializers.ModelSerializer):
+class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = "__all__"
 
 
-class RatingSerilizer(serializers.ModelSerializer):
+class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         fields = "__all__"
 
 
-class CancellationSerilizer(serializers.ModelSerializer):
+class CancellationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cancellation
         fields = "__all__"

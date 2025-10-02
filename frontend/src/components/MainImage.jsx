@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { mainImageMockData } from "@/mockdata/mockdata"
-import CircularIndeterminate from "./Loading"
+import { CircleLoader } from "./Loading"
 import slugify from "slugify"
 
 const MainImage = () => {
@@ -22,7 +22,7 @@ const MainImage = () => {
 
   // Add a conditional check here to ensure data exists before rendering the image.
   if (!mainImageData || mainImageData.length === 0) {
-    return <CircularIndeterminate />
+    return <CircleLoader/>
   }
 
   return (

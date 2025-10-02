@@ -12,6 +12,7 @@ const CheckoutPage = () => {
   const { cartItems, removeCartItem } = useCart()
   const { addOrder } = useOrderStore()
 
+  console.log(cartItems)
   const [billingDetails, setBillingDetails] = useState({
     fullName: "Suman Pandey",
     province: "Bagmati",
@@ -26,7 +27,7 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     const total = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) => sum + item.item_subtotal,
       0
     )
     setSubtotal(total)
@@ -272,7 +273,7 @@ const CheckoutPage = () => {
                       <div className="flex items-center space-x-4">
                         <div className="relative">
                           <img
-                            src={item.image}
+                            src={item.product_image1}
                             alt={item.name}
                             className="w-12 h-12 object-cover rounded-lg bg-gray-100"
                           />
@@ -285,7 +286,7 @@ const CheckoutPage = () => {
                         </div>
                       </div>
                       <span className="font-medium">
-                        {formatPrice(item.price * item.quantity)}
+                        {formatPrice(item.item_subtotal)}
                       </span>
                     </div>
                   ))}

@@ -1,6 +1,7 @@
 # views.py
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
@@ -12,15 +13,15 @@ from django.conf import settings
 from rest_framework.views import APIView
 from .serializers import (
     RegisterSerializer,
-    UserSerilizer,
-    ProductSerilizer,
-    CartSerilizer,
-    CheckoutSerilizer,
-    OrderSerilizer,
-    CategorySerilizer,
-    RatingSerilizer,
-    WishlistSerilizer,
-    CancellationSerilizer,
+    UserSerializer,
+    ProductSerializer,
+    CartSerializer,
+    CheckoutSerializer,
+    OrderSerializer,
+    CategorySerializer,
+    RatingSerializer,
+    WishlistSerializer,
+    CancellationSerializer,
 )
 from .models import (
     Product,
@@ -33,6 +34,10 @@ from .models import (
     Rating,
     User,
 )
+from .filters import ProductFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from .pagination import CustomLimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 
 
 class RegisterViewSet(viewsets.ViewSet):
@@ -104,45 +109,91 @@ class LoginViewSet(viewsets.ViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    serializer_class = UserSerilizer
+    serializer_class = UserSerializer
     queryset = User.objects.all()
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    serializer_class = ProductSerilizer
+    serializer_class = ProductSerializer
     queryset = Product.objects.all()
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProductFilter
+
+    pagination_class = CustomLimitOffsetPagination
+
+    def get_permissions(self):
+        self.permission_classes = [AllowAny]
+        if self.request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+            self.permission_classes = [IsAdminUser]
+
+        return super().get_permissions()
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    serializer_class = CategorySerilizer
+    serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
 
 class CartViewSet(viewsets.ModelViewSet):
-    serializer_class = CartSerilizer
     queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomLimitOffsetPagination
+
+    def get_queryset(self):
+        return Cart.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["delete"])
+    def clear(self, request):
+        """Clear all cart items for the logged-in user"""
+        self.get_queryset().delete()
+        return Response({"message": "Cart cleared successfully"})
+
+    @action(detail=False, methods=["get"])
+    def total(self, request):
+        """Get total cart value"""
+        queryset = self.get_queryset()
+        total = sum(item.item_subtotal for item in queryset)
+        return Response({"cart_total": total})
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        product = instance.product
+
+        product.stock += instance.quantity
+        product.save()
+
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class WishlistViewSet(viewsets.ModelViewSet):
-    serializer_class = WishlistSerilizer
+    serializer_class = WishlistSerializer
     queryset = Wishlist.objects.all()
 
 
 class CheckoutViewSet(viewsets.ModelViewSet):
-    serializer_class = CheckoutSerilizer
+    serializer_class = CheckoutSerializer
     queryset = Checkout.objects.all()
 
 
 class OrderViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderSerilizer
+    serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
 
 class RatingViewSet(viewsets.ModelViewSet):
-    serializer_class = RatingSerilizer
+    serializer_class = RatingSerializer
     queryset = Rating.objects.all()
 
 
 class CancellationViewSet(viewsets.ModelViewSet):
-    serializer_class = CancellationSerilizer
+    serializer_class = CancellationSerializer
     queryset = Cancellation.objects.all()

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Eye, EyeOff, User, Lock } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { useEffect } from "react"
-import LoadingOverlay from "@/components/LoadingOverlay"
+import { ButtonLoader } from "@/components/Loading"
 
 function LoginPage() {
   const [checkingToken, setCheckingToken] = useState(true)
@@ -21,17 +21,13 @@ function LoginPage() {
   })
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("access") : null
+    const token = sessionStorage.getItem("access")
     if (token) router.replace("/")
     else setCheckingToken(false)
   }, [router])
 
   if (checkingToken)
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-      </div>
-    )
+    return <div className="flex items-center justify-center min-h-screen"></div>
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,8 +47,9 @@ function LoginPage() {
 
       const data = await response.json()
       if (response.ok) {
-        localStorage.setItem("access", data.access)
-        localStorage.setItem("refresh", data.refresh)
+
+        sessionStorage.setItem("access", data.access)
+        sessionStorage.setItem("refresh", data.refresh)
 
         toast.success("Login successfully")
         router.push("/")
@@ -158,13 +155,9 @@ function LoginPage() {
               </Link>
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:ring-blue-200 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg cursor-pointer"
-            >
+            <ButtonLoader loading={loading} type="submit" message="Logging">
               Sign In
-            </button>
-            <LoadingOverlay show={loading} text="Checking your creditionals..." />
+            </ButtonLoader>
           </form>
 
           {/* Divider */}

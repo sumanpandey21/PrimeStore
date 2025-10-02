@@ -18,6 +18,7 @@ from api.views import (
     WishlistViewSet,
     RatingViewSet,
 )
+
 from django.conf.urls.static import static
 from django.conf import settings
 
@@ -38,7 +39,7 @@ schema_view = get_schema_view(
 
 router = DefaultRouter()
 router.register("register", RegisterViewSet, basename="register")
-router.register("login", LoginViewSet, basename="login")
+router.register("login", LoginViewSet, basename="login"),
 router.register("categories", CategoryViewSet, basename="categories")
 router.register("products", ProductViewSet, basename="products")
 router.register("carts", CartViewSet, basename="carts")
@@ -52,9 +53,11 @@ router.register("users", UserViewSet, basename="users")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
+
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("activate/<uidb64>/<token>/", ActivateUser.as_view(), name="activate"),
+    
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),

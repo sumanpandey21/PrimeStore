@@ -5,10 +5,21 @@ import LowerText from "./LowerText"
 import { dateMockData } from "@/mockdata/mockdata"
 import ProductCrousel from "./ProductCrousel"
 import ViewProductsButton from "./ViewProductsButton"
-import { productMockData } from "@/mockdata/mockdata"
 
 const FlashSalesSlider = () => {
   const [expiryTime, setExpiryTime] = useState(null)
+  const [products, setProducts] = useState([])
+
+  const fetchProducts = async () => {
+    const response = await fetch("http://localhost:8000/api/products/", {
+      method: "GET",
+    })
+    const data = await response.json()
+    setProducts(data.results ? data.results : data)
+  }
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   useEffect(() => {
     async function fetchExpiryDate() {
@@ -52,7 +63,7 @@ const FlashSalesSlider = () => {
             <LowerText text="Flash Sales" />
           )}
         </div>
-        <ProductCrousel products={productMockData} />
+        <ProductCrousel products={products} />
       </div>
 
       <ViewProductsButton text="View All Products" href="/flash-sales" />

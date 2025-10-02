@@ -36,12 +36,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full w-full">
       <body className="antialiased">
-        {!shouldHideLayout && <Navbar />}
+        {!shouldHideLayout && (
+          <header className="sticky top-0 z-50 bg-white shadow-sm">
+            <Navbar />
+          </header>
+        )}
+
         <RouteLoader />
         <main className="w-full">{children}</main>
         <ToastContainer
           position="top-right"
-          autoClose={2000}
+          autoClose={1500}
           hideProgressBar={false}
           newestOnTop={false}
           closeOnClick
@@ -51,6 +56,7 @@ export default function RootLayout({ children }) {
           pauseOnHover
           theme="colored"
         />
+
         {!shouldHideLayout && <Footer />}
       </body>
     </html>
