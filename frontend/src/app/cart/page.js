@@ -22,7 +22,7 @@ const CartPage = () => {
           Authorization: `Bearer ${token}`,
         },
       })
-      if (response.status === 401) { 
+      if (response.status === 401) {
         setCartItems([])
         toast.error("Signin required..")
         return
@@ -72,7 +72,7 @@ const CartPage = () => {
     }
   }
 
-  const handleRemoveItem = async (id) => {
+  const handleRemoveItem = async (id, product_name) => {
     try {
       const response = await fetch(`http://localhost:8000/api/carts/${id}/`, {
         method: "DELETE",
@@ -81,11 +81,14 @@ const CartPage = () => {
         },
       })
 
-      if (response.ok) {
-        removeCartItem(id)
-      } else {
+      if (!response.ok) {
         toast.error("Failed to remove item")
+        return
       }
+
+      removeCartItem(id)
+      toast.success(`${product_name} is remove from cart.` )
+      
     } catch (error) {
       toast.error("Something went wrong while removing item..")
     }
@@ -167,7 +170,7 @@ const CartPage = () => {
                         className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-100"
                       />
                       <button
-                        onClick={() => handleRemoveItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id, item.product_name)}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
                         <Trash2 className="w-3 h-3 cursor-pointer" />
