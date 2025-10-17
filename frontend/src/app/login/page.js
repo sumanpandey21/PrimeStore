@@ -8,20 +8,54 @@ import { Eye, EyeOff, User, Lock } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { useEffect } from "react"
 import { ButtonLoader } from "@/components/Loading"
+import { useCart } from "@/store/cartStore"
+import { useWishlist } from "@/store/wishlistStore"
 
 function LoginPage() {
   const [checkingToken, setCheckingToken] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-
   const router = useRouter()
+  const { setCartItems } = useCart()
+  const { setWishlistItems } = useWishlist()
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   })
 
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
+
+  const fetchCartData = async () => {
+    try {
+      const response = await fetch("/api/cart", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      const cartData = await response.json()
+      setCartItems(cartData.items)
+    } catch (error) {
+      console.error("Failed to fetch cart:", error)
+    }
+  }
+
+  const fetchWishlistData = async () => {
+    try {
+      const response = await fetch("/api/wishlist", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      const wishlistData = await response.json()
+      setWishlistItems(wishlistData.items)
+    } catch (error) {
+      console.error("Failed to fetch wishlist:", error)
+    }
+  }
+
   useEffect(() => {
-    const token = sessionStorage.getItem("access")
     if (token) router.replace("/")
     else setCheckingToken(false)
   }, [router])
@@ -47,11 +81,13 @@ function LoginPage() {
 
       const data = await response.json()
       if (response.ok) {
-
         sessionStorage.setItem("access", data.access)
         sessionStorage.setItem("refresh", data.refresh)
 
         toast.success("Login successfully")
+        fetchCartData()
+        fetchWishlistData()
+        
         router.push("/")
       } else {
         toast.error("Wrong creditionals")
