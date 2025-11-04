@@ -4,7 +4,6 @@ import MainBanner from "@/components/MainBanner";
 import FlashSalesSlider from "@/components/FlashSalesSlider";
 import SearchCategoriesSlider from "@/components/SearchCategoriesSlider";
 import BestSellingSlider from "@/components/BestSellingSlider";
-import MainImage from "@/components/MainImage";
 import ExploreProduct from "@/components/ExploreProduct";
 import FooterLogos from "@/components/FooterLogos";
 
@@ -22,7 +21,6 @@ const Page = () => {
       <FlashSalesSlider />
       <SearchCategoriesSlider />
       <BestSellingSlider />
-      <MainImage /> 
       <ExploreProduct />
       <FooterLogos />
     </div>

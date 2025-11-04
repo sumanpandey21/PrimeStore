@@ -1,21 +1,30 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 
-const ServicePromotion = () => {
+const ServicePromotion = ({ onChange }) => {
   const [services, setServices] = useState([
-    { id: 1, name: "New", checked: false },
-    { id: 2, name: "Free delivery", checked: false },
-    { id: 3, name: "Discount", checked: false },
+    { id: 1, name: "New", key: "is_new", checked: false },
+    { id: 2, name: "Discount", key: "has_discount", checked: false },
   ])
 
   const handleChange = (serviceId) => {
-    setServices(
-      services.map((service) =>
-        service.id === serviceId
-          ? { ...service, checked: !service.checked }
-          : service
-      )
+    const updated = services.map((service) =>
+      service.id === serviceId
+        ? { ...service, checked: !service.checked }
+        : service
     )
+    setServices(updated)
   }
+
+  useEffect(() => {
+    if (!onChange) return // ✅ Avoid calling undefined
+    const activeFilters = {}
+    services.forEach((s) => {
+      if (s.checked) activeFilters[s.key] = true
+    })
+    onChange(activeFilters)
+    console.log("onChange prop received:", typeof onChange)
+
+  }, [services])
 
   return (
     <div className="border-b border-gray-200 pb-6">
@@ -36,14 +45,11 @@ const ServicePromotion = () => {
                 className="sr-only"
               />
               <div
-                className={`
-                w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200
-                ${
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
                   service.checked
                     ? "bg-blue-500 border-blue-500"
                     : "border-gray-300 group-hover:border-blue-400"
-                }
-              `}
+                }`}
               >
                 {service.checked && (
                   <svg

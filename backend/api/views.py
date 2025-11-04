@@ -1,5 +1,6 @@
 # views.py
 from rest_framework import viewsets, status
+from django.db.models import F
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.contrib.auth.models import User
@@ -16,23 +17,23 @@ from .serializers import (
     UserSerializer,
     ProductSerializer,
     CartSerializer,
-    CheckoutSerializer,
     OrderSerializer,
     CategorySerializer,
     RatingSerializer,
     WishlistSerializer,
     CancellationSerializer,
+    LogoSerializer,
 )
 from .models import (
     Product,
     Cart,
-    Checkout,
     Category,
     Cancellation,
     Order,
     Wishlist,
     Rating,
     User,
+    Logo,
 )
 from .filters import ProductFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -111,6 +112,10 @@ class LoginViewSet(viewsets.ViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
+    permission_classes = {IsAuthenticated}
+
+    def get_queryset(self):
+        return User.objects.filter(id=self.request.user.id)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -128,6 +133,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAdminUser]
 
         return super().get_permissions()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.order_by(F("discount").desc(nulls_last=True))
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -150,11 +159,10 @@ class CartViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(detail=False, methods=["delete"])
+    @action(detail=False, methods=["delete"], url_path="clear")
     def clear(self, request):
-        """Clear all cart items for the logged-in user"""
-        self.get_queryset().delete()
-        return Response({"message": "Cart cleared successfully"})
+        Cart.objects.filter(user=request.user).delete()
+        return Response({"message": "All cart items removed."}, status=204)
 
     @action(detail=False, methods=["get"])
     def total(self, request):
@@ -177,16 +185,32 @@ class CartViewSet(viewsets.ModelViewSet):
 class WishlistViewSet(viewsets.ModelViewSet):
     serializer_class = WishlistSerializer
     queryset = Wishlist.objects.all()
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomLimitOffsetPagination
 
+    def get_queryset(self):
+        return Wishlist.objects.filter(user=self.request.user)
 
-class CheckoutViewSet(viewsets.ModelViewSet):
-    serializer_class = CheckoutSerializer
-    queryset = Checkout.objects.all()
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by("-created_at")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return Response(serializer.data, status=201)
+        except Exception as e:
+            raise
 
 
 class RatingViewSet(viewsets.ModelViewSet):
@@ -197,3 +221,32 @@ class RatingViewSet(viewsets.ModelViewSet):
 class CancellationViewSet(viewsets.ModelViewSet):
     serializer_class = CancellationSerializer
     queryset = Cancellation.objects.all()
+    pagination_class = CustomLimitOffsetPagination
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Cancellation.objects.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        # Example: dynamica lly change default_limit
+        paginator = self.pagination_class()
+        paginator.default_limit = int(request.query_params.get("limit", 60))
+        paginator.max_limit = 200  # optional override
+
+        self.pagination_class = lambda: paginator  # reassign dynamically
+        return super().list(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class LogoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Logo.objects.all()
+    serializer_class = LogoSerializer

@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { toast } from "react-toastify"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, User, Mail, Lock, UserPlus } from "lucide-react"
-import LoadingOverlay from "@/components/LoadingOverlay"
+import { ButtonLoader } from "@/components/Loading"
 
 function page() {
   const router = useRouter()
@@ -37,19 +37,22 @@ function page() {
 
     setLoading(true)
     try {
-      const response = await fetch("http://127.0.0.1:8000/register/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          password2: formData.password2,
-        }),
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/register/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            password2: formData.password2,
+          }),
+        }
+      )
 
       const contentType = response.headers.get("content-type") || ""
 
@@ -106,108 +109,104 @@ function page() {
         </div>
 
         {/* Form Container */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 backdrop-blur-sm">
-          <div className="space-y-5">
-            {/* Username */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+        <form action="" onSubmit={handleFormSubmit}>
+          <div className="bg-white rounded-2xl shadow-xl p-8 backdrop-blur-sm">
+            <div className="space-y-5">
+              {/* Username */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Username"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-              />
+
+              {/* Email */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Password */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type={!showPassword ? "password" : "text"}
+                  placeholder="Password"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-500 transition-colors"
+                  onClick={togglePasswordVisibility}
+                >
+                  {!showPassword ? (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type={!showPassword ? "password" : "text"}
+                  placeholder="Confirm Password"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                  value={formData.password2}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password2: e.target.value })
+                  }
+                />
+              </div>
+
+              <ButtonLoader loading={loading} type="submit" message="creating">
+                Create Account
+              </ButtonLoader>
             </div>
 
-            {/* Email */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="email"
-                placeholder="Email Address"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 text-sm">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="text-blue-500 hover:text-blue-600 font-medium transition-colors cursor-pointer"
+                >
+                  Sign in here
+                </button>
+              </p>
             </div>
-
-            {/* Password */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type={!showPassword ? "password" : "text"}
-                placeholder="Password"
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer hover:text-blue-500 transition-colors"
-                onClick={togglePasswordVisibility}
-              >
-                {!showPassword ? (
-                  <Eye className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <EyeOff className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-            </div>
-
-            {/* Confirm Password */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type={!showPassword ? "password" : "text"}
-                placeholder="Confirm Password"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg  focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                value={formData.password2}
-                onChange={(e) =>
-                  setFormData({ ...formData, password2: e.target.value })
-                }
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              onClick={handleFormSubmit}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg cursor-pointer active:bg-blue-800"
-            >
-              Create Account
-            </button>
           </div>
-
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => router.push("/login")}
-                className="text-blue-500 hover:text-blue-600 font-medium transition-colors cursor-pointer"
-              >
-                Sign in here
-              </button>
-            </p>
-          </div>
-          <LoadingOverlay show={loading} text="Creating your account..." />
-        </div>
+        </form>
       </div>
     </div>
   )

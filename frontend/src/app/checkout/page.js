@@ -7,29 +7,33 @@ import EmptyCart from "@/components/EmptyCart"
 import Dropdown from "@/components/Dropdown"
 import { toast } from "react-toastify"
 import useOrderStore from "@/store/orderStore"
+import { useRouter } from "next/navigation"
 
 const CheckoutPage = () => {
-  const { cartItems, removeCartItem } = useCart()
+  const { cartItems, removeCartItem, clearCart } = useCart()
   const { addOrder } = useOrderStore()
-
-  console.log(cartItems)
+  const router = useRouter()
   const [billingDetails, setBillingDetails] = useState({
     fullName: "Suman Pandey",
     province: "Bagmati",
     district: "Chitwan",
     townCity: "Bharatpur",
-    emailAddress: "suman@gmail.com",
     phoneNumber: "9840631397",
   })
 
   const [paymentMethod, setPaymentMethod] = useState("cash")
   const [subtotal, setSubtotal] = useState(0)
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
+
+  const calculateSubtotal = () => {
+    return cartItems.reduce((acc, item) => {
+      return acc + item.final_price * item.quantity
+    }, 0)
+  }
 
   useEffect(() => {
-    const total = cartItems.reduce(
-      (sum, item) => sum + item.item_subtotal,
-      0
-    )
+    const total = calculateSubtotal()
     setSubtotal(total)
   }, [cartItems])
 
@@ -40,22 +44,15 @@ const CheckoutPage = () => {
     }))
   }
 
-
   const validateFields = () => {
-
     const fullNameRegex = /^[A-Za-z]+(?:[ .'-][A-Za-z]+)+$/
     const phoneRegex = /^(97|98)\d{8}$/
-    const emailRegex = /^[A-Za-z][^\s@]*@[^\s@]+\.[^\s@]+$/
 
     if (!phoneRegex.test(billingDetails.phoneNumber)) {
       toast.error("Invalid phone number. Use a valid Nepali number.")
       return false
     }
 
-    if (!emailRegex.test(billingDetails.emailAddress)) {
-      toast.error("Invalid email address.")
-      return false
-    }
     if (!fullNameRegex.test(billingDetails.fullName)) {
       toast.error("Invalid name.")
       return false
@@ -66,7 +63,6 @@ const CheckoutPage = () => {
 
   const formatPrice = (price) => `Rs ${price.toLocaleString()}`
 
-
   const provinces = locations.provinces
   const districts = billingDetails.province
     ? provinces.find((p) => p.name === billingDetails.province)?.districts || []
@@ -75,33 +71,50 @@ const CheckoutPage = () => {
     ? districts.find((d) => d.name === billingDetails.district)?.cities || []
     : []
 
-  const [deliveryCharge, setDeliveryCharge] = useState("")
+  const [deliveryCharge, setDeliveryCharge] = useState(0)
   const calculateDeliveryCharge = () => {
     if (billingDetails.province === "Bagmati") setDeliveryCharge(75)
-    if (billingDetails.district === "Chitwan") setDeliveryCharge(0)
+    if (billingDetails.townCity === "Bharatpur") setDeliveryCharge(0)
     if (billingDetails.province === "Koshi") setDeliveryCharge(125)
     if (billingDetails.province === "Madhesh") setDeliveryCharge(100)
     if (billingDetails.province === "Gandaki") setDeliveryCharge(85)
     if (billingDetails.province === "Lumbini") setDeliveryCharge(90)
     if (billingDetails.province === "Karnali") setDeliveryCharge(150)
     if (billingDetails.province === "Sudurpashchim") setDeliveryCharge(200)
-
   }
 
   useEffect(() => {
     calculateDeliveryCharge()
   }, [billingDetails])
 
+  const handleRemoveAllCartItems  = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/carts/clear/", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        toast.error("Failed to remove all items")
+        return
+      }
+
+      clearCart()
+    } catch (error) {
+      toast.error("Something went wrong while removing all items.")
+    }
+  }
 
   // Place order
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     const requiredFields = [
       "fullName",
       "province",
       "district",
       "townCity",
       "phoneNumber",
-      "emailAddress",
     ]
     const missingFields = requiredFields.filter(
       (field) => !billingDetails[field].trim()
@@ -114,39 +127,43 @@ const CheckoutPage = () => {
 
     if (!validateFields()) return
 
-    cartItems.forEach((item, index) => {
-      addOrder({
-        id: Date.now().toString() + "-" + index, 
-        status: "Pending",            
-        paymentStatus: paymentMethod === "cash" ? "Pending" : "Paid",
-        createdAt: new Date().toLocaleString(),
-        estimatedDelivery: "3–5 business days",
-        fullName: billingDetails.fullName,
-        name: item.name,
-        image: item.image,
-        quantity: item.quantity,
-        amount: (item.price * item.quantity) + deliveryCharge,
-        paymentMethod,
-        province: billingDetails.province,
-        district: billingDetails.district,
-        city: billingDetails.townCity,
-        phoneNumber: billingDetails.phoneNumber,
-      });
-      removeCartItem(item.id);
-    });
+    try {
+      const response = await fetch("http://localhost:8000/api/orders/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: billingDetails.fullName,
+          province: billingDetails.province,
+          district: billingDetails.district,
+          city: billingDetails.townCity,
+          phone_number: billingDetails.phoneNumber,
+          payment_method: paymentMethod,
+          delivery_charge: deliveryCharge,
+          cart_items: cartItems.map((item) => ({
+            product: item.product,
+            quantity: item.quantity,
+          })),
+        }),
+      })
 
-    toast.success("Order placed successfully!");
+      if (!response.ok) {
+        toast.error("Could not place order")
+        return
+      }
 
+      const data = await response.json()
 
+      addOrder(data)
+      handleRemoveAllCartItems()
+      toast.success("Order placed successfully!")
+      router.push("myaccount/order/") 
 
-    setBillingDetails({
-      fullName: "",
-      province: "",
-      district: "",
-      townCity: "",
-      phoneNumber: "",
-      emailAddress: "",
-    })
+    } catch (error) {
+      toast.error("Network error")
+    }
   }
 
   return (
@@ -227,21 +244,6 @@ const CheckoutPage = () => {
                   onChange={(val) => handleInputChange("townCity", val)}
                 />
 
-                {/* Email Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address*
-                  </label>
-                  <input
-                    type="email"
-                    value={billingDetails.emailAddress}
-                    onChange={(e) =>
-                      handleInputChange("emailAddress", e.target.value)
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 bg-gray-50"
-                    required
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone Number*
@@ -299,7 +301,13 @@ const CheckoutPage = () => {
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
                     <span className="text-gray-600">Delivery Charge:</span>
-                    <span className={`font-bold ${deliveryCharge == 0 ? "text-green-600" : "text-black"} `}>{deliveryCharge}</span>
+                    <span
+                      className={`font-bold ${
+                        deliveryCharge == 0 ? "text-green-600" : "text-black"
+                      } `}
+                    >
+                      {deliveryCharge}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center text-lg font-semibold">
                     <span>Total:</span>
@@ -324,7 +332,12 @@ const CheckoutPage = () => {
                     >
                       <span>Online payment</span>
                       <div className="flex items">
-                        <img src="/esewa.png" alt="eSewa" width={70} height={70} />
+                        <img
+                          src="/esewa.png"
+                          alt="eSewa"
+                          width={70}
+                          height={70}
+                        />
                       </div>
                     </label>
                   </div>

@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+import uuid
 
 
 class User(AbstractUser):
@@ -30,6 +32,7 @@ class Product(models.Model):
     image1 = models.ImageField(upload_to="products/", null=True, blank=True)
     image2 = models.ImageField(upload_to="products/", null=True, blank=True)
     image3 = models.ImageField(upload_to="products/", null=True, blank=True)
+    created_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -94,62 +97,105 @@ class Wishlist(models.Model):
         return f"{self.user.username} - {self.product.name}"
 
 
-class Checkout(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="user_checkouts"
-    )
-    cart = models.ForeignKey(
-        Cart, on_delete=models.CASCADE, related_name="cart_checkouts"
-    )
-    address = models.CharField(max_length=255)
-    delivery_charge = models.PositiveIntegerField()
-    full_name = models.CharField(max_length=100)
-    contact_number = models.CharField(max_length=15)
-
-    @property
-    def total_price(self):
-        return self.cart.item_subtotal + self.delivery_charge
-
-    def __str__(self):
-        return f"Checkout by {self.user.username}"
-
-
 class Order(models.Model):
     DELIVERY_STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
         ("DELIVERED", "Delivered"),
+        ("CANCELLED", "Cancelled"),
     ]
 
     PAYMENT_STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("PAID", "Paid"),
+        ("REFUNDED", "Refunded"),
     ]
 
+    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_orders")
-    checkout = models.ForeignKey(
-        Checkout, on_delete=models.DO_NOTHING, related_name="checkout_orders"
-    )
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="product_orders"
-    )
-    created_at = models.DateTimeField()
-    delivery_status = models.CharField(
-        max_length=9, choices=DELIVERY_STATUS_CHOICES, default="PENDING"
-    )
-    payment_status = models.CharField(
-        max_length=7, choices=PAYMENT_STATUS_CHOICES, default="PENDING"
+    full_name = models.CharField(max_length=255, null=True, blank=True)
+    province = models.CharField(max_length=255, null=True, blank=True)
+    district = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=255, null=True, blank=True)
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+    delivery_charge = models.PositiveIntegerField(null=True, blank=True)
+    total_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
     )
 
+    carts = models.ManyToManyField(Cart, related_name="cart_orders", blank=True)
+
+    delivery_status = models.CharField(
+        max_length=10, choices=DELIVERY_STATUS_CHOICES, default="PENDING"
+    )
+    payment_status = models.CharField(
+        max_length=10, choices=PAYMENT_STATUS_CHOICES, default="PENDING"
+    )
+    payment_method = models.CharField(max_length=50, null=True, blank=True)
+
+    created_at = models.DateTimeField()
+
     def __str__(self):
-        return f"Order {self.id} - {self.user.username}"
+        return f"Order {self.order_id} - {self.user}"
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        Order, related_name="order_items", on_delete=models.CASCADE
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    product_name = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    product_image1 = models.ImageField(upload_to="orders/", null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.product_name} x {self.quantity}"
 
 
 class Cancellation(models.Model):
-    order = models.ForeignKey(
-        Order, on_delete=models.DO_NOTHING, related_name="order_cancellations"
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="user", null=True, blank=True
     )
-    created_at = models.DateTimeField()
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="cancellations",
+    )
+    order_item = models.ForeignKey(
+        OrderItem,
+        on_delete=models.CASCADE,
+        related_name="cancellations",
+        null=True,
+        blank=True,
+        help_text="If null, it means entire order was cancelled",
+    )
+    canceled_quantity = models.PositiveIntegerField(null=True, blank=True)
+    reason = models.CharField(
+        max_length=50,
+        default="CUSTOMER_REQUEST",
+    )
+    cancelled_at = models.DateTimeField()
 
     def __str__(self):
-        return f"Cancellation of Order {self.order.id}"
+        if self.order_item:
+            return (
+                f"Cancelled {self.canceled_quantity} of {self.order_item.product_name}"
+            )
+        return f"Cancelled entire order {self.order.order_id}"
+
+
+def validate_svg(file):
+    if not file.name.endswith(".svg"):
+        raise ValidationError("Only SVG files are allowed.")
+
+
+class Logo(models.Model):
+    logo = models.FileField(
+        upload_to="logo/", validators=[validate_svg], null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name_plural = "Logo"

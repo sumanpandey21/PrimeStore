@@ -29,11 +29,14 @@ function LoginPage() {
 
   const fetchCartData = async () => {
     try {
-      const response = await fetch("/api/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/carts`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       const cartData = await response.json()
       setCartItems(cartData.items)
     } catch (error) {
@@ -43,11 +46,14 @@ function LoginPage() {
 
   const fetchWishlistData = async () => {
     try {
-      const response = await fetch("/api/wishlist", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/wishlist`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       const wishlistData = await response.json()
       setWishlistItems(wishlistData.items)
     } catch (error) {
@@ -71,13 +77,16 @@ function LoginPage() {
     }
     try {
       setLoading(true)
-      const response = await fetch("http://127.0.0.1:8000/api/token/", {
-        method: "POST",
-        body: JSON.stringify(formData),
-        headers: {
-          "Content-type": "application/json",
-        },
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/token/`,
+        {
+          method: "POST",
+          body: JSON.stringify(formData),
+          headers: {
+            "Content-type": "application/json",
+          },
+        }
+      )
 
       const data = await response.json()
       if (response.ok) {
@@ -87,7 +96,7 @@ function LoginPage() {
         toast.success("Login successfully")
         fetchCartData()
         fetchWishlistData()
-        
+
         router.push("/")
       } else {
         toast.error("Wrong creditionals")

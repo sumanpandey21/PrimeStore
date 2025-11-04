@@ -1,134 +1,195 @@
 "use client"
-import useOrderStore from "@/store/orderStore"
+import React, { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { RefreshCw, Package2 } from "lucide-react"
+import { Package } from "lucide-react"
+import { toast } from "react-toastify"
 
-export default function CancellationsPage() {
-  const { cancellations } = useOrderStore()
+function CancellationsPage() {
+  const [cancellations, setCancellations] = useState([])
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
 
-  const EmptyState = () => (
-    <div className="text-center py-16">
-      <div className="mx-auto h-24 w-24 text-gray-300 mb-6">
-        <Package2 size={96} className="mx-auto" />
-      </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">No cancelled orders</h3>
-      <p className="text-gray-500 max-w-md mx-auto">
-        You haven't cancelled any orders yet. When you cancel an order, it will appear here for your reference.
-      </p>
-    </div>
-  )
+  useEffect(() => {
+    const getCancelledOrder = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/cancellations/`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        if (!response.ok) {
+          toast.error("Couldn't fetch the cancelled orders!")
+          return
+        }
+        const data = await response.json()
+        setCancellations(data.results)
+      } catch (error) {
+        toast.error("Network error, try again!")
+      }
+    }
+    getCancelledOrder()
+  }, [])
+
+  const mergedCancellations = useMemo(() => {
+    const merged = []
+
+    cancellations.forEach((cancellation) => {
+      const productId = Number(cancellation.product_id)
+      const productPrice = Number(cancellation.product_price)
+      const name = cancellation.order_item_name?.trim()
+
+      const existingIndex = merged.findIndex(
+        (m) =>
+          Number(m.product_id) === productId &&
+          m.order_item_name === name &&
+          Number(m.product_price) === productPrice
+      )
+
+      if (existingIndex >= 0) {
+        merged[existingIndex].totalQuantity += cancellation.canceled_quantity
+        merged[existingIndex].cancellationCount += 1
+        merged[existingIndex].cancellationIds.push(cancellation.id)
+        merged[existingIndex].latestCancelDate =
+          new Date(cancellation.cancelled_at) >
+          new Date(merged[existingIndex].latestCancelDate)
+            ? cancellation.cancelled_at
+            : merged[existingIndex].latestCancelDate
+      } else {
+        merged.push({
+          id: cancellation.id,
+          product_id: cancellation.product_id,
+          order_item_name: cancellation.order_item_name,
+          product_image: cancellation.product_image,
+          product_price: parseFloat(cancellation.product_price),
+          totalQuantity: cancellation.canceled_quantity,
+          cancellationCount: 1,
+          cancellationIds: [cancellation.id],
+          latestCancelDate: cancellation.cancelled_at,
+          order_status: cancellation.order_status,
+          user: cancellation.user,
+        })
+      }
+    })
+
+    return merged
+  }, [cancellations])
+  
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
 
   return (
-    <>
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
-              <RefreshCw className="mr-3 text-red-500" size={28} />
-              Cancelled Orders
-            </h1>
-            <p className="mt-2 text-gray-600">
-              {cancellations.length} {cancellations.length === 1 ? 'order' : 'orders'} cancelled
+    <div className="min-h-screen py-6 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Cancelled Items
+          </h1>
+          <p className="text-gray-600">
+            View all your cancelled products and quantities
+          </p>
+        </div>
+
+        {mergedCancellations && mergedCancellations.length > 0 ? (
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-300 text-black font-semibold uppercase">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs  tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs  tracking-wider">
+                      Qty
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs  tracking-wider">
+                      Unit Price
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs  tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs  tracking-wider">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {mergedCancellations.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-4">
+                          <Image
+                            src={item.product_image}
+                            alt={item.order_item_name}
+                            width={60}
+                            height={60}
+                            className="rounded-lg object-cover"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 line-clamp-2">
+                              {item.order_item_name}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-lg font-bold text-red-600">
+                          {item.totalQuantity}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {item.totalQuantity === 1 ? "item" : "items"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.product_price?.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-lg font-bold text-green-600">
+                          {(
+                            item.totalQuantity * item.product_price
+                          ).toLocaleString()}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-sm text-gray-900">
+                          {formatDate(item.latestCancelDate)}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <Package size={48} className="mx-auto text-gray-400 mb-4" />
+            <p className="text-lg text-gray-500">No cancelled items found.</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Your cancelled products will appear here.
             </p>
           </div>
-
-          {/* Content */}
-          {cancellations.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gradient-to-r bg-gray-300 text-black x-4 sm:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-2 sm:px-4 py-4 text-center">
-                        Product
-                      </th>
-                      <th className="px-2 sm:px-4 py-4 text-center ">
-                        Order ID
-                      </th>
-                      <th className="px-2 sm:px-4 py-4 text-center">
-                        Date
-                      </th>
-                      <th className="px-2 sm:px-4 py-4 text-center ">
-                        Amount
-                      </th>
-                      <th className="px-2 sm:px-4 py-4 text-center">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {cancellations.map((order, index) => (
-                      <tr
-                        key={order.id}
-                        className={`hover:bg-gray-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                          }`}
-                      >
-                        <td className="px-2 sm:px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-3 sm:space-x-4">
-                            <div className="flex-shrink-0 relative">
-                              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200">
-                                <Image
-                                  src={order.image || "/placeholder.png"}
-                                  alt={order.name}
-                                  width={64}
-                                  height={64}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                              <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs">✕</span>
-                              </div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                                {order.name}
-                              </p>
-                              {/* Show Order ID on mobile */}
-                              <p className="text-xs text-gray-500 mt-1 sm:hidden font-mono">
-                                #{order.id}
-                              </p>
-                              {/* Show Date on small screens */}
-                              <p className="text-xs text-gray-500 mt-1 md:hidden">
-                                {order.cancelledDate || order.createdAt || order.date}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                          <div className="text-sm font-mono text-gray-900">{order.id}</div>
-                        </td>
-
-                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                          <div className="text-sm text-gray-900">
-                            {order.cancelledDate || order.createdAt || order.date}
-                          </div>
-                        </td>
-
-                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                          <div className="text-sm font-medium text-gray-900">
-                            {order.amount ? `Rs ${order.amount.toLocaleString()}` : 'N/A'}
-                          </div>
-                        </td>
-
-                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-center">
-                          <span className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                            <RefreshCw size={10} className="mr-1" />
-                            {order.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
+
+export default CancellationsPage

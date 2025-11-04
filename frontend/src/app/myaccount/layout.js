@@ -1,56 +1,46 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link"
+import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function AccountLayout({ children }) {
-
   const pathname = usePathname()
-  const [email, setEmail] = useState("");
-  const linkClass = (path) =>
-    `block w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-50 ${pathname === path
-      ? "text-red-600 "
-      : "text-gray-700 hover:text-red-600"
-    }`;
+  const [username, setUsername] = useState("")
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
 
+  const linkClass = (path) =>
+    `block w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-50 ${
+      pathname === path ? "text-red-600 " : "text-gray-700 hover:text-red-600"
+    }`
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchUserName() {
       try {
-        const token = localStorage.getItem("authToken"); // adjust if your key is different
-
-        if (!token) {
-          console.log("No token found");
-          return;
-        }
-
-        const response = await fetch("http://127.0.0.1:8000/auth/user/", {
+        const response = await fetch(`http://127.0.0.1:8000/api/users/`, {
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        });
+        })
 
-        if (!response.ok) throw new Error("Failed to fetch user");
+        if (!response.ok) throw new Error("Failed to fetch user")
 
-        const data = await response.json();
-        setEmail(data.email);
-      } catch (error) {
-        console.log(error);
-      }
+        const data = await response.json()
+        setUsername(data[0].username)
+      } catch (error) {}
     }
 
-    fetchData();
-  }, []);
-
+    fetchUserName()
+  }, [])
 
   return (
     <div className="min-h-screen">
       <div className="bg-white ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-end">
           <div className="text-sm ">
-            Welcome! <span className="text-red-500 font-medium">{email}</span>
+            Welcome! <span className="text-red-500 font-bold">{username.toUpperCase()}</span>
           </div>
         </div>
       </div>
@@ -65,7 +55,10 @@ export default function AccountLayout({ children }) {
             </h2>
 
             <nav className="space-y-4">
-              <Link href="/myaccount/my-profile" className={linkClass("/myaccount/my-profile")}>
+              <Link
+                href="/myaccount/my-profile"
+                className={linkClass("/myaccount/my-profile")}
+              >
                 My profile
               </Link>
             </nav>
@@ -75,10 +68,16 @@ export default function AccountLayout({ children }) {
                 My Orders
               </h3>
               <nav className="space-y-3">
-                <Link href="/myaccount/order" className={linkClass("/myaccount/order")}>
+                <Link
+                  href="/myaccount/order"
+                  className={linkClass("/myaccount/order")}
+                >
                   Orders
                 </Link>
-                <Link href="/myaccount/cancellations" className={linkClass("/myaccount/cancellations")}>
+                <Link
+                  href="/myaccount/cancellations"
+                  className={linkClass("/myaccount/cancellations")}
+                >
                   My Cancellations
                 </Link>
               </nav>
@@ -90,6 +89,5 @@ export default function AccountLayout({ children }) {
         <div className="lg:w-3/4">{children}</div>
       </div>
     </div>
-
-  );
+  )
 }

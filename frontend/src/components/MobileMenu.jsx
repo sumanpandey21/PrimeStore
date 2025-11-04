@@ -12,6 +12,8 @@ import { Menu } from "lucide-react"
 const MobileMenu = ({ isOpen, onClose }) => {
   const { authToken } = useAuthStore()
   const pathname = usePathname()
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -82,7 +84,7 @@ const MobileMenu = ({ isOpen, onClose }) => {
             )
           })}
 
-          {!authToken && (
+          {!token && (
             <Link
               href="/login"
               onClick={onClose}

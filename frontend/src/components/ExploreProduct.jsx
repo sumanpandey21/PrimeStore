@@ -10,11 +10,13 @@ const ExploreProduct = () => {
   const [products, setProducts] = useState([])
 
   const fetchProducts = async () => {
-    const response = await fetch("http://localhost:8000/api/products/", {
-      method: "GET",
-    })
-    const data = await response.json()
-    setProducts(data.results ? data.results : data)
+    try {
+      const response = await fetch("http://localhost:8000/api/products/", {
+        method: "GET",
+      })
+      const data = await response.json()
+      setProducts(data.results ? data.results : data)
+    } catch (error) {}
   }
   useEffect(() => {
     fetchProducts()

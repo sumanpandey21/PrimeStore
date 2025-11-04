@@ -6,7 +6,10 @@ export const useCart = create(
   persist(
     (set) => ({
       cartItems: [],
-      setCartItems: (items) => set({ cartItems: items }),
+      cartCount: 0, 
+
+      setCartItems: (items) =>
+        set({ cartItems: items, cartCount: items.length }),
 
       addCartItem: (item) =>
         set((state) => {
@@ -18,9 +21,13 @@ export const useCart = create(
                   ? { ...i, quantity: i.quantity + 1 }
                   : i
               ),
+              cartCount: state.cartCount, 
             }
           }
-          return { cartItems: [...state.cartItems, item] }
+          return {
+            cartItems: [...state.cartItems, item],
+            cartCount: state.cartCount + 1,
+          }
         }),
 
       updateQuantity: (id, newQuantity) =>
@@ -28,14 +35,16 @@ export const useCart = create(
           cartItems: state.cartItems.map((item) =>
             item.id === id ? { ...item, quantity: newQuantity } : item
           ),
+          cartCount: state.cartCount, 
         })),
 
       removeCartItem: (id) =>
         set((state) => ({
           cartItems: state.cartItems.filter((item) => item.id !== id),
+          cartCount: state.cartCount - 1,
         })),
 
-      clearCart: () => set({ cartItems: [] }),
+      clearCart: () => set({ cartItems: [], cartCount: 0 }),
     }),
     {
       name: "cart-storage",

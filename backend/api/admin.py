@@ -7,10 +7,11 @@ from .models import (
     Product,
     Cart,
     Wishlist,
-    Checkout,
     Order,
+    OrderItem,
     Cancellation,
     Rating,
+    Logo,
 )
 
 
@@ -35,6 +36,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ("category",)
     search_fields = ("name",)
     inlines = [RatingInline]
+    list_per_page = 10
 
     def image_tag(self, obj):
         if obj.image1:
@@ -45,30 +47,6 @@ class ProductAdmin(admin.ModelAdmin):
         return "No Image"
 
     image_tag.short_description = "Image"
-
-
-@admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "user",
-        "product",
-        "product_image",
-        "created_at",
-        "delivery_status",
-        "payment_status",
-    )
-    list_filter = ("delivery_status", "payment_status")
-
-    def product_image(self, obj):
-        if obj.product.image1:
-            return format_html(
-                '<img src="{}" width="50" height="50" style="object-fit:cover;"/>',
-                obj.product.image1.url,
-            )
-        return "No Image"
-
-    product_image.short_description = "Product Image"
 
 
 @admin.register(Rating)
@@ -98,24 +76,147 @@ class WishlistAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "product")
 
 
-@admin.register(Checkout)
-class CheckoutAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "user",
-        "full_name",
-        "contact_number",
-        "address",
-        "delivery_charge",
-        "total_price",
-    )
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ("id", "username", "email")
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ("product_name", "quantity", "price", "product_id")
+    can_delete = False
 
 
 @admin.register(Cancellation)
 class CancellationAdmin(admin.ModelAdmin):
-    list_display = ("id", "order", "created_at")
+    list_display = (
+        "order_id_display",
+        "user_display",
+        "order_status_display",
+        "order_item_display",
+        "canceled_quantity",
+        "cancelled_at",
+    )
+    list_filter = (
+        "cancelled_at",
+        "order__delivery_status",
+        "order__user",
+    )
+    search_fields = (
+        "order__order_id",
+        "order__user__username",
+        "order_item__product__name",
+    )
+    ordering = ("-cancelled_at",)
+    list_per_page = 15
+
+    @admin.display(description="Order ID")
+    def order_id_display(self, obj):
+        return str(obj.order.order_id) if obj.order else "—"
+
+    @admin.display(description="User")
+    def user_display(self, obj):
+        return obj.order.user.username if obj.order and obj.order.user else "—"
+
+    @admin.display(description="Order Status")
+    def order_status_display(self, obj):
+        return obj.order.delivery_status if obj.order else "—"
+
+    @admin.display(description="Order Item")
+    def order_item_display(self, obj):
+        if obj.order_item:
+            product_name = obj.order_item.product_name
+            return format_html(f"<strong>{product_name}</strong>")
+        return "Entire Order Cancelled"
 
 
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ("id", "username", "email")
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = (
+        "order_id",
+        "user",
+        "full_name",
+        "total_price",
+        "delivery_status",
+        "payment_status",
+        "created_at",
+    )
+    list_filter = (
+        "delivery_status",
+        "payment_status",
+        "province",
+        "created_at",
+    )
+    list_per_page = 15
+    search_fields = (
+        "user__username",
+        "full_name",
+        "phone_number",
+        "order_id",
+    )
+    list_editable = (
+        "delivery_status",
+        "payment_status",
+    )
+    readonly_fields = (
+        "created_at",
+        "order_id",
+    )
+    fieldsets = (
+        (
+            "Customer Information",
+            {
+                "fields": (
+                    "user",
+                    "full_name",
+                    "phone_number",
+                )
+            },
+        ),
+        (
+            "Address",
+            {
+                "fields": (
+                    "province",
+                    "district",
+                    "city",
+                )
+            },
+        ),
+        (
+            "Order Details",
+            {
+                "fields": (
+                    "total_price",
+                    "delivery_charge",
+                    "carts",
+                )
+            },
+        ),
+        (
+            "Payment & Delivery",
+            {
+                "fields": (
+                    "payment_status",
+                    "payment_method",
+                    "order_id",
+                    "delivery_status",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": ("created_at",),
+            },
+        ),
+    )
+    ordering = ("-created_at",)
+
+    inlines = [OrderItemInline]
+
+
+@admin.register(Logo)
+class LogoAdmin(admin.ModelAdmin):
+    list_display = ("id", "logo")

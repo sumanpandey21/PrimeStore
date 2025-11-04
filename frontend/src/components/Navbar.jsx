@@ -5,19 +5,24 @@ import Link from "next/link"
 import UserMenu from "./UserMenu"
 import { usePathname, useRouter } from "next/navigation"
 import { Menu } from "lucide-react"
-import { User, ShoppingCart, Heart, Search } from "lucide-react"  
+import { User, ShoppingCart, Heart, Search } from "lucide-react"
 import MobileMenu from "./MobileMenu"
 import { useCart } from "@/store/cartStore"
+import { useWishlist } from "@/store/wishlistStore"
 
 const Navbar = ({ q = "" }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [logoUrl, setLogoUrl] = useState(null)
   const menuRef = useRef(null)
   const buttonRef = useRef(null)
   const pathname = usePathname()
   const router = useRouter()
   const [query, setQuery] = useState(q)
-  const { cartItems } = useCart()
+
+  const { cartCount } = useCart()
+  const { wishlistCount } = useWishlist()
+
   const token =
     typeof window !== "undefined" ? sessionStorage.getItem("access") : null
 
@@ -28,7 +33,7 @@ const Navbar = ({ q = "" }) => {
   ]
 
   const handleMenu = () => {
-    setIsMenuOpen((prev) => !prev) // toggle instead of always open
+    setIsMenuOpen((prev) => !prev)
   }
 
   const handleMobileMenu = () => {
@@ -74,6 +79,17 @@ const Navbar = ({ q = "" }) => {
     }
   }, [isMenuOpen])
 
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/logo/")
+        const data = await response.json()
+        if (data.length > 0) setLogoUrl(data[0]?.logo)
+      } catch (error) {}
+    }
+    fetchLogo()
+  }, [])
+
   return (
     <div>
       <div>
@@ -90,20 +106,21 @@ const Navbar = ({ q = "" }) => {
               href="/"
               className="flex justify-center items-center text-lg lg:text-xl font-bold"
             >
-              <Image
-                src="/primestore.svg"
-                alt="PrimeStore Logo"
-                width={64}
-                height={24}
-                className=" lg:mr-[-12] mb-[-8]"
-              />
+              {logoUrl && (
+                <Image
+                  src={logoUrl || null}
+                  alt="PrimeStore Logo"
+                  width={60}
+                  height={20}
+                  className=" lg:mr-[2] mb-[5]"
+                />
+              )}
               <div className="hidden sm:block mt-4 ml-[-10] lg:ml-[0]">
                 PrimeStore
               </div>
             </Link>
           </div>
 
-          {/* Navbar Links Big Screen */}
           <div className="hidden lg:flex justify-center items-center gap-4">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
@@ -145,20 +162,25 @@ const Navbar = ({ q = "" }) => {
 
             <Link
               href="/wishlist"
-              className="p-0.5 lg:p-2 rounded-full hover:bg-gray-100"
+              className="relative flex items-center justify-center p-2 lg:p-3 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <Heart />
+              <Heart className="w-5 h-5 lg:w-6 lg:h-6 text-gray-700" />
+              {token && wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] lg:text-xs font-bold px-1.5 lg:px-2 py-0.5 rounded-full shadow-md">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
+
             <Link
               href="/cart"
               className="relative flex items-center justify-center p-2 lg:p-3 rounded-full hover:bg-gray-100 transition-colors"
             >
               <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 text-gray-700" />
 
-              {/* Badge */}
-              {token && cartItems.length > 0 && (
+              {token && cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] lg:text-xs font-bold px-1.5 lg:px-2 py-0.5 rounded-full shadow-md">
-                  {cartItems.length}
+                  {cartCount}
                 </span>
               )}
             </Link>

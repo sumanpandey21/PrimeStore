@@ -9,7 +9,6 @@ const Categories = () => {
   const [categories, setCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
   const searchParams = useSearchParams()
-  const id = searchParams.get("q")
   
   const displayCategories = async () => {
     try {

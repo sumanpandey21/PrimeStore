@@ -5,6 +5,8 @@ import Link from "next/link"
 import EmptyCart from "@/components/EmptyCart"
 import { useCart } from "@/store/cartStore"
 import { toast } from "react-toastify"
+import Image from "next/image"
+import slugify from "slugify"
 
 const CartPage = () => {
   const { cartItems, setCartItems, updateQuantity, removeCartItem, clearCart } =
@@ -87,29 +89,9 @@ const CartPage = () => {
       }
 
       removeCartItem(id)
-      toast.success(`${product_name} is remove from cart.` )
-      
+      toast.success(`${product_name} is remove from cart.`)
     } catch (error) {
       toast.error("Something went wrong while removing item..")
-    }
-  }
-
-  const handleClearCart = async () => {
-    try {
-      const response = await fetch("http://localhost:8000/api/cart/clear/", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        clearCart()
-      } else {
-        toast.error("Failed to clear cart")
-      }
-    } catch (error) {
-      toast.error("Something went wrong while clearing cart..")
     }
   }
 
@@ -131,7 +113,12 @@ const CartPage = () => {
     fetchCartsData()
   }, [])
 
-  const formatPrice = (price) => (price ? `Rs ${price.toLocaleString()}` : "")
+  const formatPrice = (price) => {
+    if (!price) return ""
+
+    const roundedPrice = Math.ceil(price)
+    return `Rs ${roundedPrice.toLocaleString()}`
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -163,19 +150,32 @@ const CartPage = () => {
                 >
                   {/* Product Info */}
                   <div className="flex items-center space-x-4 md:col-span-6">
-                    <div className="relative">
-                      <img
-                        src={item.product_image1}
-                        alt={item.name}
-                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-100"
-                      />
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      <Link
+                        href={`/products/${slugify(item.product_name, {
+                          replacement: "-",
+                          lower: true,
+                        })}?q=${item.product}`}
+                      >
+                        <Image
+                          src={item.product_image1}
+                          alt={item.product_name}
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
+                        />
+                      </Link>
+
                       <button
-                        onClick={() => handleRemoveItem(item.id, item.product_name)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        onClick={() =>
+                          handleRemoveItem(item.id, item.product_name)
+                        }
+                        className="absolute -top-0 -right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
                         <Trash2 className="w-3 h-3 cursor-pointer" />
                       </button>
                     </div>
+
                     <div>
                       <h3 className="font-medium text-gray-800 text-sm sm:text-base">
                         {item.product_name}

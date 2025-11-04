@@ -9,109 +9,168 @@ import RatingFilter from "@/components/RatingFilter"
 import { Filter, X } from "lucide-react"
 import { toast } from "react-toastify"
 import { CircleLoader } from "@/components/Loading"
+import ProductNotFound from "@/components/ProductNotFound"
 
 export default function CategoryPage() {
   const searchParams = useSearchParams()
-
   const id = searchParams.get("q")
   const [categories, setCategories] = useState([])
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filters, setFilters] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
   const applyFilters = async () => {
     try {
+      setLoading(true)
+      setHasError(false)
       const params = new URLSearchParams()
       if (id) params.append("category", id)
 
-      // later you can add filters like
-      // if (minPrice) params.append("price__gte", minPrice)
-      // if (maxPrice) params.append("price__lte", maxPrice)
+      // Add all active filters
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value)
+      })
 
       const response = await fetch(
         `http://localhost:8000/api/products/?${params.toString()}`
       )
+      if (!response.ok) throw new Error("Failed to fetch products")
+      
       const data = await response.json()
-
       setCategories(data.results ? data.results : data)
     } catch (error) {
+      setHasError(true)
       toast.error("Failed to fetch products")
+      setCategories([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const handleFilterChange = (data) => {
+    setFilters((prev) => {
+      const updated = { ...prev }
+      
+      // Update with new data
+      Object.entries(data).forEach(([key, value]) => {
+        if (value === false || value === null || value === '' || value === undefined) {
+          // Remove the filter if it's being unchecked
+          delete updated[key]
+        } else {
+          // Add or update the filter
+          updated[key] = value
+        }
+      })
+      
+      console.log('Updated filters:', updated) // For debugging
+      return updated
+    })
+  }
+
+  const clearAllFilters = () => {
+    setFilters({})
   }
 
   useEffect(() => {
     applyFilters()
-  }, [id])
-
-  if (categories.length == 0) return <CircleLoader />
+  }, [filters, id])
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
-        {/* Desktop Sidebar - Hidden on mobile since we use MobileMenu */}
-        <aside className="hidden overflow-scroll lg:block sticky top-0 left-0 w-72 xl:w-80 h-screen bg-white shadow-lg overflow-y-auto">
-          <div className="">
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block sticky top-0 left-0 w-72 xl:w-80 h-screen bg-white shadow-lg overflow-y-auto">
+          <div className="p-6">
             <div className="mb-8">
               <Categories />
             </div>
 
-            <div className="mb-8 px-10">
-              <ServicePromotion />
+            <div className="mb-8">
+              <ServicePromotion onChange={handleFilterChange} />
             </div>
 
-            {/* Price Filter Section */}
-            <div className="mb-8 px-10">
-              <PriceFilter />
+            <div className="mb-8">
+              <PriceFilter onChange={handleFilterChange} />
             </div>
 
-            {/* Rating Filter Section */}
-            <div className="mb-8 px-10">
-              <RatingFilter />
+            <div className="mb-8">
+              <RatingFilter onChange={handleFilterChange} />
             </div>
-          </div>
-        </aside>
-        {/* Main Content */}
 
-        <main className="flex-1">
-          <div className="p-4 lg:p-6 xl:p-8">
-            {/* Mobile Header with Category Name and Filter Button */}
-            <div className="flex items-center justify-between mb-6 lg:hidden">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {categories.name}
-              </h1>
+            {Object.keys(filters).length > 0 && (
               <button
-                onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+                onClick={clearAllFilters}
+                className="w-full py-2 px-4 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
-                <Filter className="w-5 h-5 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">
-                  Filters
-                </span>
+                Clear All Filters
               </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
-              {categories.map((category) => (
-                <ProductCard
-                  key={category.id}
-                  id={category.id}
-                  image={category.image1}
-                  title={category.name}
-                  price={category.price}
-                  rating={category.rating}
-                  ratingCount={category.totalRatings}
-                />
-              ))}
-            </div>
-
-            {/* Load More Button */}
-            {categories.length != 0 && (
-              <div className="flex justify-center mb-8">
-                <button className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
-                  Load more.....
-                </button>
-              </div>
             )}
           </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 w-full">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between p-4 lg:hidden bg-white border-b border-gray-200">
+            <h1 className="text-xl font-bold text-gray-900">Products</h1>
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+            >
+              <Filter className="w-5 h-5 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Filters</span>
+            </button>
+          </div>
+
+          {/* Loading State */}
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+              <div className="flex flex-col items-center gap-4">
+                <CircleLoader />
+                <p className="text-gray-600 text-sm">Loading products...</p>
+              </div>
+            </div>
+          ) : categories.length === 0 ? (
+            /* No Products State */
+            <div className="flex items-center justify-center min-h-[calc(100vh-100px)]">
+              <ProductNotFound />
+            </div>
+          ) : (
+            /* Products Grid */
+            <div className="p-4 lg:p-6 xl:p-8">
+              <div className="mb-6">
+                <p className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{categories.length}</span> products
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
+                {categories.map((category) => (
+                  <ProductCard
+                    key={category.id}
+                    id={category.id}
+                    image={category.image1}
+                    title={category.name}
+                    price={category.price}
+                    rating={category.rating}
+                    ratingCount={category.totalRatings}
+                    discount={category.discount}
+                  />
+                ))}
+              </div>
+
+              {/* Load More Button */}
+              <div className="flex justify-center mb-8">
+                <button className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
+                  Load More
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       </div>
+
       {/* Mobile Filter Modal */}
       <div
         className={`lg:hidden fixed inset-0 z-50 transition-all duration-300 ${
@@ -126,7 +185,7 @@ export default function CategoryPage() {
           onClick={() => setIsFilterOpen(false)}
         />
 
-        {/* Filter Drawer - Top to Bottom */}
+        {/* Filter Drawer */}
         <div
           className={`fixed top-0 left-0 right-0 bg-white rounded-b-2xl shadow-2xl transform transition-transform duration-300 max-h-[80vh] ${
             isFilterOpen ? "translate-y-0" : "-translate-y-full"
@@ -145,26 +204,23 @@ export default function CategoryPage() {
 
           {/* Filter Content */}
           <div className="overflow-y-auto max-h-[calc(80vh-140px)]">
-            {/* Service & Promotion Filter */}
             <div className="p-4 border-b border-gray-200">
-              <ServicePromotion />
+              <ServicePromotion onChange={handleFilterChange} />
             </div>
 
-            {/* Price Filter */}
             <div className="p-4 border-b border-gray-200">
-              <PriceFilter />
+              <PriceFilter onChange={handleFilterChange} />
             </div>
 
-            {/* Rating Filter */}
             <div className="p-4 border-b border-gray-200">
-              <RatingFilter />
+              <RatingFilter onChange={handleFilterChange} />
             </div>
           </div>
 
-          {/* Footer with Action Buttons */}
+          {/* Footer Buttons */}
           <div className="flex gap-3 p-4 border-t border-gray-200 bg-white sticky bottom-0">
             <button
-              onClick={() => setIsFilterOpen(false)}
+              onClick={clearAllFilters}
               className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors duration-200"
             >
               Clear All

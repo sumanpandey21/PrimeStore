@@ -8,6 +8,9 @@ import {
 import Link from "next/link"
 
 export default function Footer() {
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
+
   const hoverClass =
     " relative inline-block cursor-pointer after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-[2px] after:bg-orange-500 after:transition-all after:duration-300 hover:after:w-full "
   return (
@@ -47,9 +50,11 @@ export default function Footer() {
         <div>
           <h2 className="text-xl font-bold mb-4">Account</h2>
           <ul className="flex flex-col space-y-2">
-            <Link href={"/myaccount"}>
-              <li className={hoverClass}>My Account</li>
-            </Link>
+            {token && (
+              <Link href={"/myaccount"}>
+                <li className={hoverClass}>My Account</li>
+              </Link>
+            )}
             <Link href={"/login"}>
               <li className={hoverClass}>Login / Register</li>
             </Link>

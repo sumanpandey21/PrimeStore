@@ -14,9 +14,9 @@ from api.views import (
     CancellationViewSet,
     UserViewSet,
     OrderViewSet,
-    CheckoutViewSet,
     WishlistViewSet,
     RatingViewSet,
+    LogoViewSet,
 )
 
 from django.conf.urls.static import static
@@ -43,21 +43,19 @@ router.register("login", LoginViewSet, basename="login"),
 router.register("categories", CategoryViewSet, basename="categories")
 router.register("products", ProductViewSet, basename="products")
 router.register("carts", CartViewSet, basename="carts")
-router.register("checkouts", CheckoutViewSet, basename="checkouts")
 router.register("orders", OrderViewSet, basename="orders")
 router.register("cancellations", CancellationViewSet, basename="cancellations")
 router.register("wishlists", WishlistViewSet, basename="wishlists")
 router.register("ratings", RatingViewSet, basename="ratings")
 router.register("users", UserViewSet, basename="users")
+router.register("logo", LogoViewSet, basename="logo")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
-
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("activate/<uidb64>/<token>/", ActivateUser.as_view(), name="activate"),
-    
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),

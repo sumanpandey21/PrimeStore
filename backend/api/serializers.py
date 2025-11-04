@@ -1,15 +1,19 @@
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Product,
     Cart,
-    Checkout,
     Category,
     Cancellation,
     Order,
     Wishlist,
     Rating,
     User,
+    Logo,
+    OrderItem,
 )
 
 
@@ -55,7 +59,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "email"]
+        fields = ["id", "username", "email"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -153,7 +157,6 @@ class CartSerializer(serializers.ModelSerializer):
 
         return cart_item
 
-
     def update(self, instance, validated_data):
         product = instance.product
         new_quantity = validated_data.get("quantity", instance.quantity)
@@ -179,22 +182,284 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class WishlistSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_image1 = serializers.ImageField(source="product.image1", read_only=True)
+    final_price = serializers.DecimalField(
+        source="product.final_price", max_digits=10, decimal_places=2, read_only=True
+    )
+    username = serializers.CharField(source="user.username", read_only=True)
+    product_stock = serializers.IntegerField(source="product.stock", read_only=True)
 
     class Meta:
         model = Wishlist
-        fields = "__all__"
+        fields = (
+            "id",
+            "user",
+            "product",
+            "username",
+            "product_name",
+            "product_image1",
+            "final_price",
+            "product_stock",
+        )
+        read_only_fields = (
+            "id",
+            "user",
+            "username",
+            "product_name",
+            "product_image1",
+            "final_price",
+            "product_stock",
+        )
+
+    def create(self, validated_data):
+        user = validated_data["user"]
+        product = validated_data["product"]
+        quantity = validated_data.get("quantity", 1)
+
+        return super().create(validated_data)
 
 
-class CheckoutSerializer(serializers.ModelSerializer):
+class OrderItemSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+
     class Meta:
-        model = Checkout
-        fields = "__all__"
+        model = OrderItem
+        fields = [
+            "id",
+            "product_id",
+            "product_name",
+            "quantity",
+            "price",
+            "product_image1",
+        ]
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    order_id = serializers.UUIDField(read_only=True)
+    cart_items = serializers.ListField(write_only=True)
+    order_items = OrderItemSerializer(many=True, read_only=True)
+    payment_method = serializers.CharField(
+        required=False, allow_null=True, allow_blank=True
+    )
+
     class Meta:
         model = Order
-        fields = "__all__"
+        fields = [
+            "order_id",
+            "user",
+            "full_name",
+            "province",
+            "district",
+            "city",
+            "phone_number",
+            "delivery_status",
+            "payment_status",
+            "created_at",
+            "payment_method",
+            "delivery_charge",
+            "total_price",
+            "cart_items",
+            "order_items",
+        ]
+        read_only_fields = [
+            "order_id",
+            "delivery_status",
+            "payment_status",
+            "created_at",
+        ]
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        user_carts = Cart.objects.filter(user=user)
+
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=user,
+                full_name=validated_data.get("full_name"),
+                province=validated_data.get("province"),
+                district=validated_data.get("district"),
+                city=validated_data.get("city"),
+                phone_number=validated_data.get("phone_number"),
+                payment_method=validated_data.get("payment_method"),
+                delivery_charge=validated_data.get("delivery_charge"),
+                created_at=timezone.now(),
+            )
+
+            total_price = 0
+
+            for cart in user_carts:
+                product = cart.product
+
+                if product.stock < cart.quantity:
+                    raise serializers.ValidationError(
+                        f"Not enough stock for product {product.name}"
+                    )
+
+                # reduce stock
+                product.save()
+
+                # create OrderItem
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    product_name=product.name,
+                    product_image1=product.image1,
+                    quantity=cart.quantity,
+                    price=product.final_price,
+                )
+
+                total_price += product.final_price * cart.quantity
+
+                # set total price
+
+                order.total_price = total_price + (order.delivery_charge or 0)
+                order.save()
+
+        return order
+
+
+class CancellationSerializer(serializers.ModelSerializer):
+    order_id = serializers.UUIDField(source="order.order_id", read_only=True)
+    user = serializers.CharField(source="order.user.username", read_only=True)
+    order_status = serializers.CharField(source="order.delivery_status", read_only=True)
+
+    order_item = serializers.PrimaryKeyRelatedField(
+        queryset=OrderItem.objects.all(), required=False, allow_null=True
+    )
+    product_id = serializers.IntegerField(
+        source="order_item.product.id", read_only=True
+    )
+    order_item_name = serializers.CharField(
+        source="order_item.product.name", read_only=True
+    )
+    order_item_quantity = serializers.IntegerField(
+        source="order_item.quantity", read_only=True
+    )
+    product_image = serializers.ImageField(
+        source="order_item.product.image1", read_only=True
+    )
+    product_price = serializers.DecimalField(
+        source="order_item.price", max_digits=10, decimal_places=2, read_only=True
+    )
+
+    class Meta:
+        model = Cancellation
+        fields = [
+            "id",
+            "order",
+            "order_id",
+            "user",
+            "order_status",
+            "product_id",
+            "order_item",
+            "order_item_name",
+            "order_item_quantity",
+            "product_image",
+            "product_price",
+            "canceled_quantity",
+            "cancelled_at",
+        ]
+        read_only_fields = [
+            "id",
+            "order_id",
+            "user",
+            "product_id",
+            "order_status",
+            "order_item_name",
+            "order_item_quantity",
+            "product_image",
+            "product_price",
+        ]
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        order = attrs.get("order")
+        order_item = attrs.get("order_item")
+        canceled_quantity = attrs.get("canceled_quantity", 1)
+
+        if not order:
+            raise serializers.ValidationError("Order is required.")
+
+        # Full order cancellation
+        if not order_item:
+            if order.delivery_status != "PENDING":
+                raise serializers.ValidationError(
+                    "Only pending orders can be cancelled."
+                )
+            attrs["canceled_quantity"] = 0
+            return attrs
+
+        # Partial item cancellation
+        if canceled_quantity <= 0:
+            raise serializers.ValidationError(
+                "Canceled quantity must be greater than 0."
+            )
+
+        if canceled_quantity > order_item.quantity:
+            raise serializers.ValidationError(
+                f"Cannot cancel more than {order_item.quantity} for this item."
+            )
+
+        if order.delivery_status != "PENDING":
+            raise serializers.ValidationError(
+                "Only items from pending orders can be cancelled."
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        order = validated_data["order"]
+        order_item = validated_data.get("order_item")
+        canceled_quantity = validated_data.get("canceled_quantity", 1)
+        cancelled_at = validated_data.get("cancelled_at") or timezone.now()
+
+        # --- Full Order Cancellation ---
+        if not order_item:
+            last_cancellation = None
+
+            for item in order.order_items.all():  # use .items (as per related_name)
+                product = item.product
+                product.stock += item.quantity
+                product.save()
+
+                last_cancellation = Cancellation.objects.create(
+                    user=user,
+                    order=order,
+                    order_item=item,
+                    canceled_quantity=item.quantity,
+                    cancelled_at=cancelled_at,
+                )
+
+                item.quantity = 0
+                item.save(update_fields=["quantity"])
+
+            order.delivery_status = "CANCELLED"
+            order.save(update_fields=["delivery_status"])
+            return last_cancellation
+
+        # --- Partial Item Cancellation ---
+        product = order_item.product
+        product.stock += canceled_quantity
+        product.save()
+
+        order_item.quantity -= canceled_quantity
+        order_item.save(update_fields=["quantity"])
+
+        cancellation = Cancellation.objects.create(
+            user=user,
+            order=order,
+            order_item=order_item,
+            canceled_quantity=canceled_quantity,
+            cancelled_at=cancelled_at,
+        )
+
+        if all(item.quantity == 0 for item in order.order_items.all()):
+            order.delivery_status = "CANCELLED"
+            order.save()
+
+        return cancellation
 
 
 class RatingSerializer(serializers.ModelSerializer):
@@ -203,7 +468,7 @@ class RatingSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CancellationSerializer(serializers.ModelSerializer):
+class LogoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Cancellation
-        fields = "__all__"
+        model = Logo
+        fields = ["id", "logo"]

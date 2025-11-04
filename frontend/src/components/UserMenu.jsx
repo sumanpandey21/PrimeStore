@@ -1,21 +1,23 @@
 "use client"
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/store/auth"
 import { LogOut } from "lucide-react"
 import { User, Package, RefreshCw, Star } from "lucide-react"
 import { useCart } from "@/store/cartStore"
+import { useWishlist } from "@/store/wishlistStore"
 
 const UserMenu = () => {
   const router = useRouter()
-  const token = sessionStorage.getItem("access")
+  const token =
+    typeof window !== "undefined" ? sessionStorage.getItem("access") : null
   const { clearCart } = useCart()
-  
+  const { clearWishlist } = useWishlist()
+
   const handleLogout = () => {
     sessionStorage.clear()
     clearCart()
+    clearWishlist()
     sessionStorage.removeItem("access")
     router.push("/")
   }

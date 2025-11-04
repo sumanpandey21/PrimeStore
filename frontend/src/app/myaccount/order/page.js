@@ -20,6 +20,7 @@ function OrdersPage() {
   const [cancelQuantity, setCancelQuantity] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [confirmCancelModal, setConfirmCancelModal] = useState(false)
+  const [totalAmount, setTotalAmount] = useState(0)
   const buttonRef = useRef(null)
   const modalRef = useRef(null)
   const cancelModalRef = useRef(null)
@@ -171,77 +172,85 @@ function OrdersPage() {
   const activeOrders = orders.filter(
     (order) => order["delivery_status"] !== "CANCELLED"
   )
+  // console.log(typeof(orders))
+  activeOrders.map((order)=>{
+    console.log(order)
+  })
 
-useEffect(() => {
-  const handleClickOutside = (event) => {
-    const confirmModalEl = document.getElementById("confirm-cancel-modal")
+  
 
-    // Was any sub-modal open?
-    const subModalOpen = !!cancelModal || !!confirmCancelModal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const confirmModalEl = document.getElementById("confirm-cancel-modal")
 
-    // Consider click "inside parent" if it's inside modalRef OR inside any sub-modal overlay
-    const clickedInsideParent =
-      (modalRef.current && modalRef.current.contains(event.target)) ||
-      (cancelOverlayRef.current && cancelOverlayRef.current.contains(event.target)) ||
-      (confirmOverlayRef.current && confirmOverlayRef.current.contains(event.target))
+      // Was any sub-modal open?
+      const subModalOpen = !!cancelModal || !!confirmCancelModal
 
-    // -------------------- PARENT OUTSIDE CLICK --------------------
-    // Parent should close only when NO sub-modal is open and click is outside parent area & button
-    if (
-      isModalOpen &&
-      !subModalOpen &&
-      modalRef.current &&
-      !modalRef.current.contains(event.target) &&
-      buttonRef.current &&
-      !buttonRef.current.contains(event.target)
-    ) {
-      setIsModalOpen(false)
-      setSelectedOrder(null)
-      return
-    }
+      // Consider click "inside parent" if it's inside modalRef OR inside any sub-modal overlay
+      const clickedInsideParent =
+        (modalRef.current && modalRef.current.contains(event.target)) ||
+        (cancelOverlayRef.current &&
+          cancelOverlayRef.current.contains(event.target)) ||
+        (confirmOverlayRef.current &&
+          confirmOverlayRef.current.contains(event.target))
 
-    // If any sub-modal is open, freeze parent closing on clicks outside whole parent.
-    if (subModalOpen) {
-      // If clicked completely outside parent (and overlays) — do nothing (freeze parent).
-      if (!clickedInsideParent) return
-
-      // If clicked inside parent area (or on submodal overlay), allow closing the specific sub-modal
-      // Close cancel sub-modal when clicked outside its inner container but inside parent area
+      // -------------------- PARENT OUTSIDE CLICK --------------------
+      // Parent should close only when NO sub-modal is open and click is outside parent area & button
       if (
-        cancelModal &&
-        cancelModalRef.current &&
-        !cancelModalRef.current.contains(event.target)
+        isModalOpen &&
+        !subModalOpen &&
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
       ) {
-        setCancelModal(null)
-        setCancelQuantity(1)
+        setIsModalOpen(false)
+        setSelectedOrder(null)
         return
       }
 
-      // Close confirm sub-modal when clicked outside its inner container but inside parent area
-      if (
-        confirmCancelModal &&
-        confirmModalEl &&
-        !confirmModalEl.contains(event.target)
-      ) {
-        setConfirmCancelModal(false)
+      // If any sub-modal is open, freeze parent closing on clicks outside whole parent.
+      if (subModalOpen) {
+        // If clicked completely outside parent (and overlays) — do nothing (freeze parent).
+        if (!clickedInsideParent) return
+
+        // If clicked inside parent area (or on submodal overlay), allow closing the specific sub-modal
+        // Close cancel sub-modal when clicked outside its inner container but inside parent area
+        if (
+          cancelModal &&
+          cancelModalRef.current &&
+          !cancelModalRef.current.contains(event.target)
+        ) {
+          setCancelModal(null)
+          setCancelQuantity(1)
+          return
+        }
+
+        // Close confirm sub-modal when clicked outside its inner container but inside parent area
+        if (
+          confirmCancelModal &&
+          confirmModalEl &&
+          !confirmModalEl.contains(event.target)
+        ) {
+          setConfirmCancelModal(false)
+          return
+        }
+
+        // If click is inside a sub-modal's inner container, do nothing (keep everything open)
         return
       }
-
-      // If click is inside a sub-modal's inner container, do nothing (keep everything open)
-      return
     }
-  }
 
-  if (isModalOpen || cancelModal || confirmCancelModal) {
-    document.addEventListener("mousedown", handleClickOutside)
-  } else {
-    document.removeEventListener("mousedown", handleClickOutside)
-  }
+    if (isModalOpen || cancelModal || confirmCancelModal) {
+      document.addEventListener("mousedown", handleClickOutside)
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
 
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside)
-  }
-}, [isModalOpen, cancelModal, confirmCancelModal])
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isModalOpen, cancelModal, confirmCancelModal])
 
   const handleCancelConfirmation = () => {
     setConfirmCancelModal(true)
@@ -309,9 +318,16 @@ useEffect(() => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-medium text-gray-900">
-                          Rs {Math.ceil(order.total_price.toLocaleString())}
-                        </div>
+                        {activeOrders.length!==0 && order.order_items.map((item) => (
+                          <div 
+                          id={item.id}
+                          className="text-sm font-medium text-gray-900">
+                            Rs.{" "}
+                            {Math.ceil(
+                              item.price * item.quantity
+                            ).toLocaleString()}
+                          </div>
+                        ))}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
@@ -589,9 +605,10 @@ useEffect(() => {
 
         {/* ====================== QUANTITY CANCEL MODAL ====================== */}
         {cancelModal && (
-          <div 
-          ref={cancelOverlayRef}
-          className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div
+            ref={cancelOverlayRef}
+            className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-[60] p-4"
+          >
             <div
               ref={cancelModalRef}
               className="bg-white rounded-lg max-w-md w-full mx-4 shadow-2xl"
@@ -720,9 +737,10 @@ useEffect(() => {
 
         {/* ====================== CONFIRM ENTIRE ORDER CANCEL MODAL ====================== */}
         {confirmCancelModal && (
-          <div 
-          ref={confirmOverlayRef}
-          className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div
+            ref={confirmOverlayRef}
+            className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-[60] p-4"
+          >
             <div
               id="confirm-cancel-modal"
               className="bg-white rounded-lg max-w-md w-full mx-4 shadow-2xl"

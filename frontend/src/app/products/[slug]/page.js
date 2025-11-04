@@ -45,11 +45,11 @@ const ProductDetailsPage = () => {
     fetchProducts()
   }, [])
 
+  const product = products.find((p) => p.id === parseInt(id))
+
   const handleAddToCart = async () => {
     if (!token) {
-      toast.error(
-        "Please log in to add items to your cart"
-      )
+      toast.error("Please log in to add items to your cart")
       return
     }
     try {
@@ -85,7 +85,41 @@ const ProductDetailsPage = () => {
     }
   }
 
-  const product = products.find((p) => p.id === parseInt(id))
+  const isInWishlist = wishlistItems.some(
+    (item) => item.product === product?.id
+  )
+
+  const handleAddToWishList = async () => {
+    if (isInWishlist) {
+      toast.info("Product already in wishlist.")
+      return
+    }
+    try {
+      const response = await fetch("http://localhost:8000/api/wishlists/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product: product.id,
+          quantity: 1,
+        }),
+      })
+      if (!response.ok) {
+        const errData = await response.json()
+        toast.error(errData[0] || "Failed to add product in wishlist")
+        return
+      }
+
+      const data = await response.json()
+      addWishlistItem(data)
+
+      toast.success("Item added to wishlist!")
+    } catch (error) {
+      toast.error("Something went wrong while adding to wishlist.")
+    }
+  }
 
   useEffect(() => {
     if (product) {
@@ -105,7 +139,7 @@ const ProductDetailsPage = () => {
 
   // fix discount calculation
   const discountPercent = product?.discount ? parseFloat(product.discount) : 0
-  const discountedPrice = Math.round(
+  const discountedPrice = Math.ceil(
     parseFloat(product.price) -
       (parseFloat(product.price) * discountPercent) / 100
   )
@@ -121,27 +155,6 @@ const ProductDetailsPage = () => {
         ★
       </span>
     ))
-  }
-
-  const isInWishlist = wishlistItems.some((item) => item.id === product.id)
-
-  const handleAddToWishList = () => {
-    if (!isInWishlist) {
-      addWishlistItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        discount: product.discount,
-        image: product.image1,
-        item_left: product.stock,
-        in_stock: product.stock > 0,
-        rating: product.rating,
-        totalRatings: product.totalRatings,
-      })
-      toast.success("Product added to wishlist successfully!")
-    } else {
-      toast.info("Already in wishlist")
-    }
   }
 
   return (
@@ -211,7 +224,7 @@ const ProductDetailsPage = () => {
 
           {/* Price */}
           <div className="text-2xl font-semibold text-gray-900">
-            Rs.{" "}
+            Rs.
             {discountedPrice > 0
               ? discountedPrice.toLocaleString()
               : parseFloat(product.price).toLocaleString()}
@@ -235,12 +248,15 @@ const ProductDetailsPage = () => {
             </button>
 
             <button
-              className="p-3 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className={`p-3 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${
+                isInWishlist ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
               onClick={handleAddToWishList}
+              disabled={isInWishlist}
             >
               <Heart
-                className={`w-5 h-5 cursor-pointer ${
-                  isInWishlist ? "text-red-500 fill-red-500" : "text-gray-500"
+                className={`w-5 h-5  ${
+                  isInWishlist ? "text-red-500 fill-red-500 " : "text-gray-500"
                 }`}
               />
             </button>
@@ -251,7 +267,9 @@ const ProductDetailsPage = () => {
             <div className="flex items-center gap-3">
               <Truck className="w-5 h-5 text-gray-600" />
               <div>
-                <div className="font-medium">Free Delivery inside Chitwan</div>
+                <div className="font-medium">
+                  Free Delivery inside <b>Bharatpur</b>
+                </div>
                 <div className="text-sm text-gray-500">
                   Checkout dropdown box for Delivery Availability
                 </div>
